@@ -39,3 +39,6 @@
 
 # debug information files
 *.dwo
+
+# Please ignore the build directory?
+build
