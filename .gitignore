@@ -42,3 +42,5 @@
 
 # Please ignore the build directory?
 build
+*.swp
+.cache
