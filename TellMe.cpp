@@ -54,17 +54,51 @@ int volspec(int volnum,int a, int b){
         return atoi(ss.str().substr(a, b).c_str());
 }
 
+//The two functions below aim to take the SimpleDet mod from 0-35 and translate that into a row and module
+int getmod(int sdlayer, int sdmod){
+        if(sdlayer % 2 == 0){
+                return 5 - (sdmod % 6);
+        }else{
+                return 5 - (floor(sdmod/6));
+        }
+}
+
+int getrow(int sdlayer, int sdmod){
+        if(sdlayer % 2 == 0){
+                return floor(sdmod/6);
+        }else{
+                return sdmod % 6;
+        }
+}
+
+//This function aims to take layer, sddet, and sdstrip and translate that into a channel 0-31
+int getch(int sdlayer, int sddet, int sdstrp){
+	if(sdlayer % 2 == 0){
+		if(sddet == 0){return sdstrp + 24;}
+		if(sddet == 1){return 23-sdstrp;}
+		if(sddet == 2){return sdstrp;}
+		if(sddet == 3){return 15-sdstrp;}
+		else{return -1;}
+	}
+	if(sdlayer % 2 != 0){
+                if(sddet == 0){return 7 - sdstrp;}
+                if(sddet == 1){return 31 - sdstrp;}
+                if(sddet == 2){return sdstrp + 8;}
+                if(sddet == 3){return sdstrp + 16;}
+		else{return -1;}
+	}
+	else{return -1;}
+}
+
 int main(int argc, char *argv[]){
 
 GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
-parser->AddCommandLineOption<string>("out_file", "name of output root file", "out.root", "o");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
 string reco_path = parser->GetOption<string>("in_path");
-string out_path = parser->GetOption<string>("out_file");
 
 cout << reco_path << endl;
 
@@ -91,18 +125,16 @@ const Int_t NBins = 50;
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
 
+//Not a proper tell me anymore lol
+TH1F * h;
+h = new TH1F ("Edep l", "Edep", NBins, xlow,xhigh);
+
 //For Plotting purposes
 ca::GPlottingTools Plotting;
 char text[400]; //This variable is used later to name the plots
 
 //All of the plots are declared here
 //("Title",Number of bins,xmin,xmax,"xlabel","ylabel",ymin,ymax)
-
-//2D Histos
-//Currently just two histograms, one for Umbrella, one for CBE
-TH2D* HTofUmbOccu = Plotting.DefineTH2D("HTofUmbOccu", 84, -1950, 1950, 84, -1950, 1950, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 0.5, TreeRec->GetEntries()/(MainLoopScaleFactor*500));
-TH2D* HTofCBEtopOccu = Plotting.DefineTH2D("HTofCBEtopOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 0.5, TreeRec->GetEntries()/(MainLoopScaleFactor*500));
-TH2D* HTofCBEbotOccu = Plotting.DefineTH2D("HTofCBEbotOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 0.5, TreeRec->GetEntries()/(MainLoopScaleFactor*500));
 
 //Now we can go over the loop
 TreeRec->GetEntry(0);
@@ -124,96 +156,71 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                 CTrackRec* pt = Event->GetPrimaryTrack();
                 uint pt_index = 0;
                 for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
-        //Apply event-level cuts
+                //Apply event-level cuts
                 if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) > eventbetacut){
 
-                        //cout << endl << "Event is " << i << endl;
+                        cout << endl << "Event is " << i << endl;
 
                         //First loop over the event for your needed flags and variables
                         for(unsigned int isig = 0; isig < Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
                                 unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig); //Event->GetVolumeId().at(isig); //Check the VolumeId of the event
-                                if(volspec(VolumeId,0,3) == 100){ Umbflag = 1;} // cout << "UMB hit!" <<endl ;e
+                                //cout << "Volume ID is " << VolumeId << " Energy Dep is " << Event->GetTrack(0)->GetEnergyDeposition(isig) << " MeV "<< endl;
+                                if(volspec(VolumeId,0,3) == 100){ Umbflag = 1;} // cout << "UMB hit!" << endl;
                                 if(volspec(VolumeId,0,3) == 110) {CBEtopflag = 1;}// cout << "CBE top hit!" << endl;
                                 if(volspec(VolumeId,0,3) == 111) {CBEbotflag = 1;}// cout << "CBE bot hit!" << endl;
+                                if(GGeometryObject::IsTrackerVolume(VolumeId)){h->Fill(Event->GetTrack(0)->GetEnergyDeposition(isig));}
+                                if(GGeometryObject::IsTrackerVolume(VolumeId)){
+
+                              		int layer = GGeometryObject::GetTrackerLayer(VolumeId);
+                                    int sdmod = GGeometryObject::GetLayerModule(VolumeId);
+						            int det = GGeometryObject::GetModuleDetector(VolumeId);
+						            int sdstrip = GGeometryObject::GetDetectorStrip(VolumeId);
+
+						            int row = getrow(layer,sdmod);
+						            int mod = getmod(layer,sdmod);
+						            int strip = getch(layer, det, sdstrip);
+                                    cout << "Volume ID is " << VolumeId << " lrms is : " << layer << row << mod << " " << strip << " Energy Dep is " << Event->GetTrack(0)->GetEnergyDeposition(isig) << " MeV "<< endl;
+                                }
                         }
 
                         //If the desired flags are checked, proceed to fill the relevant histograms.
                         if(Umbflag && CBEtopflag && CBEbotflag /*&& (pt->GetChi2()/pt->GetNdof()) < 3.2*/){
-                                //cout << "Event is " << i << endl;
+                                //cout << "Event is " << i << " passes the cuts" << endl;
 
                                 //Loop over the events on track 0
                                 for(unsigned int k = 0; k < Event->GetTrack(0)->GetEnergyDeposition().size(); k++){
                                 unsigned int VolumeId = Event->GetTrack(0)->GetVolumeId(k); //For each hit, check the volume ID
                                         //Check if the volume is a TOF volume and make sure you pass the low energy criteria
-                                        if(GGeometryObject::IsTofVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(k) > TofCutLow){
-                                            if(volspec(VolumeId,0,3) == 100){ //If hit is Umb, fill the Umb Occu plot
-                                                HTofUmbOccu->Fill(Event->GetTrack(0)->GetPosition(k).X(), Event->GetTrack(0)->GetPosition(k).Y());
-                                                //HTofUmbOccu->Fill(Event->GetTrack(0)->GetPosition(k).X()+Event->GetTrack(0)->GetPositionResidual(k).X(), Event->GetTrack(0)->GetPosition(k).Y()+Event->GetTrack(0)->GetPositionResidual(k).Y());
-                                            }
-                                            if(volspec(VolumeId,0,3) == 110){ //If hit is CBEtop, fill the CBEtop Occu plot
-                                                HTofCBEtopOccu->Fill(Event->GetTrack(0)->GetPosition(k).X(), Event->GetTrack(0)->GetPosition(k).Y());
-                                                //HTofCBEtopOccu->Fill(Event->GetTrack(0)->GetPosition(k).X()+Event->GetTrack(0)->GetPositionResidual(k).X(), Event->GetTrack(0)->GetPosition(k).Y()+Event->GetTrack(0)->GetPositionResidual(k).Y());
-                                            }
-                                            if(volspec(VolumeId,0,3) == 111){ //If the hit is CBEbot, fill the Cbebot Occu plot
-                                                HTofCBEbotOccu->Fill(Event->GetTrack(0)->GetPosition(k).X(), Event->GetTrack(0)->GetPosition(k).Y());
-                                            }
 
 
                                         }
                                 }
-                        }
 
                 }
         }
 }
 
+
 TCanvas * c1 = new TCanvas("c1", "c1", 200, 10, 900, 900);
-c1->SetLeftMargin(0.15);
-c1->SetRightMargin(0.17);
-c1->SetTopMargin(0.11);
-c1->SetBottomMargin(0.11);
-HTofUmbOccu->SetTitle("Umbrella Occupancy Plot");
-HTofUmbOccu->GetXaxis()->SetTitle("X Location Umb Hit");
-HTofUmbOccu->GetYaxis()->SetTitle("Y Location Umb Hit");
-HTofUmbOccu->GetYaxis()->SetTitleOffset(2);
-HTofUmbOccu->GetZaxis()->SetTitle("Number of Entries");
+c1->SetLeftMargin(0.1);
+c1->SetRightMargin(0.16);
+c1->SetTopMargin(0.1);
+c1->SetBottomMargin(0.1);
 
-HTofUmbOccu->Draw("COLZ");
-//gStyle->SetTitleAlign(33);
-//gStyle->SetTitleY(.99);
-//gStyle->SetTitleX(.80);
-gPad->SetLogz();
+gPad->SetGridx(1);
+gPad->SetGridy(1);
+gPad->SetLogy(1);
 
-char histname[400];
-string TofUmbTitle = "TofUmbOccu";
-sprintf(histname, "%s.root",TofUmbTitle.c_str());
-c1->SaveAs(histname);
-sprintf(histname, "%s.png",TofUmbTitle.c_str());
-c1->SaveAs(histname);
-sprintf(histname, "%s.pdf",TofUmbTitle.c_str());
-c1->SaveAs(histname);
+h->SetTitle("Full Tracker Energy Depositions (MeV)");
+h->GetXaxis()->SetTitle("Energy Deposition (no Cos factor) MeV");
+h->GetYaxis()->SetTitle("Number of Hits");
+h->GetYaxis()->SetRangeUser(100, 500000);
 
-TCanvas * c2 = new TCanvas("c2", "c2", 200, 10, 900, 900);
-c2->SetLeftMargin(0.15);
-c2->SetRightMargin(0.17);
-c2->SetTopMargin(0.11);
-c2->SetBottomMargin(0.11);
-HTofCBEtopOccu->SetTitle("CBE Top Occupancy Plot");
-HTofCBEtopOccu->GetXaxis()->SetTitle("X Location CBE Top Hit");
-HTofCBEtopOccu->GetYaxis()->SetTitle("Y Location CBE Top Hit");
-HTofCBEtopOccu->GetYaxis()->SetTitleOffset(2);
-HTofCBEtopOccu->GetZaxis()->SetTitle("Number of Entries");
-HTofCBEtopOccu->Draw("COLZ");
-gPad->SetLogz();
+h->SetLineColor(2);
+//h->Draw("hist");
 
-string TofCBEtopTitle = "TofCBEtopOccu";
-sprintf(histname, "%s.root",TofCBEtopTitle.c_str());
-c2->SaveAs(histname);
-sprintf(histname, "%s.png",TofCBEtopTitle.c_str());
-c2->SaveAs(histname);
-sprintf(histname, "%s.pdf",TofCBEtopTitle.c_str());
-c2->SaveAs(histname);
-
+//sprintf(text, "EdepTest.png");
+//c1->SaveAs(text);
 
 cout << endl << "I am done" << endl;
 return 1;
