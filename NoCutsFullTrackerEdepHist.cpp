@@ -101,11 +101,19 @@ parser->Parse();
 
 string reco_path = parser->GetOption<string>("in_path");
 string out_path = parser->GetOption<string>("out_file");
+cout << reco_path << endl;
+//sprintf(FilenameRoot,"%s/%s*.root",argv[1], argv[2]);
+//cout << argv[1] << endl;
+
+char FilenameRoot[400];
+sprintf(FilenameRoot,"%s*.root",reco_path.c_str());
+//sprintf(FilenameRoot,reco_path.c_str()); //210 simu data on my computer!
+cout << "File name is : " << FilenameRoot << endl;
 
 CEventRec* Event = new CEventRec(); //New reconstructed event
 TChain * TreeRec = new TChain("TreeRec"); //New TreeRec Tchain object (this is new to me)
 TreeRec->SetBranchAddress("Rec", &Event); //Set the branch address using Event (defined above)
-TreeRec->Add(reco_path.c_str());
+TreeRec->Add(FilenameRoot);
 
 int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
 double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
@@ -203,19 +211,9 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
       	        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
 
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
-		if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut){
-			//cout << "Event is " << i << endl;
+		if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -1 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < 0 && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  0){
 
-			//-----------EVENT LEVEL CUT APPLIED
-
-			for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
-                                   unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig); //Check the VolumeId of the event
-                                   if(volspec(VolumeId,0,3) == 100){ Umbflag = 1;} // cout << "UMB hit!" <<endl ;
-                                   if(volspec(VolumeId,0,3) == 110) {CBEtopflag = 1;}// cout << "CBE top hit!" << endl;
-                                   if(volspec(VolumeId,0,3) == 111) {CBEbotflag = 1;}// cout << "CBE bot hit!" << endl;
-                           }
-
-			if(Umbflag && CBEtopflag /*&& CBEbotflag*/ && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
+			if(/*Umbflag && CBEtopflag && CBEbotflag && (pt->GetChi2()/pt->GetNdof()) < 3.2 */ 1){
 				//cout << "Event number " << i << " passes the cuts!" << endl;
 				for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
 					unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig);
