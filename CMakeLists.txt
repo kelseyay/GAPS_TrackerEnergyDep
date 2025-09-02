@@ -50,3 +50,7 @@ target_link_libraries(TellMe ${LIB_DIRS})
 #add_executable(FitHist LGFitHist.cpp)
 #target_include_directories(FitHist PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 #target_link_libraries(FitHist ${LIB_DIRS})
+
+add_executable(NoCutsEdepHist NoCutsFullTrackerEdepHist.cpp)
+target_include_directories(NoCutsEdepHist PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(NoCutsEdepHist ${LIB_DIRS})
