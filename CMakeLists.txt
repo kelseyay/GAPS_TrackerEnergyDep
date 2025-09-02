@@ -42,3 +42,7 @@ target_link_libraries(Occupancy ${LIB_DIRS})
 add_executable(EdepHist FullTrackerEdepHist.cpp)
 target_include_directories(EdepHist PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(EdepHist ${LIB_DIRS})
+
+add_executable(NoCutsEdepHist NoCutsFullTrackerEdepHist.cpp)
+target_include_directories(NoCutsEdepHist PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(NoCutsEdepHist ${LIB_DIRS})
