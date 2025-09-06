@@ -214,6 +214,27 @@ c2->SaveAs(histname);
 sprintf(histname, "%s.pdf",TofCBEtopTitle.c_str());
 c2->SaveAs(histname);
 
+TCanvas * c3 = new TCanvas("c3", "c3", 200, 10, 900, 900);
+c3->SetLeftMargin(0.15);
+c3->SetRightMargin(0.17);
+c3->SetTopMargin(0.11);
+c3->SetBottomMargin(0.11);
+HTofCBEbotOccu->SetTitle("CBE Bot Occupancy Plot");
+HTofCBEbotOccu->GetXaxis()->SetTitle("X Location CBE Top Hit (mm)");
+HTofCBEbotOccu->GetYaxis()->SetTitle("Y Location CBE Top Hit (mm)");
+HTofCBEbotOccu->GetYaxis()->SetTitleOffset(2);
+HTofCBEbotOccu->GetZaxis()->SetTitle("Number of Entries");
+HTofCBEbotOccu->Draw("COLZ");
+gPad->SetLogz();
+
+string TofCBEbotTitle = "TofCBEbotOccu";
+sprintf(histname, "%s.root",TofCBEbotTitle.c_str());
+c3->SaveAs(histname);
+sprintf(histname, "%s.png",TofCBEbotTitle.c_str());
+c3->SaveAs(histname);
+sprintf(histname, "%s.pdf",TofCBEbotTitle.c_str());
+c3->SaveAs(histname);
+
 
 cout << endl << "I am done" << endl;
 return 1;

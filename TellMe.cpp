@@ -160,6 +160,11 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                 if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) > eventbetacut){
 
                         cout << endl << "Event is " << i << endl;
+			
+			//Hit series method?
+			for(GRecoHit hit:Event->GetHitSeries()){
+				cout << "Hit " << hit.GetIndex() << " has E_dep = " << hit.GetTotalEnergyDeposition() << " MeV" << endl;
+			}
 
                         //First loop over the event for your needed flags and variables
                         for(unsigned int isig = 0; isig < Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){

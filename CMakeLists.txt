@@ -47,10 +47,14 @@ add_executable(TellMe TellMe.cpp)
 target_include_directories(TellMe PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(TellMe ${LIB_DIRS})
 
-#add_executable(FitHist LGFitHist.cpp)
-#target_include_directories(FitHist PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
-#target_link_libraries(FitHist ${LIB_DIRS})
+add_executable(FitHist LGFitHist.cpp)
+target_include_directories(FitHist PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(FitHist ${LIB_DIRS})
 
 add_executable(NoCutsEdepHist NoCutsFullTrackerEdepHist.cpp)
 target_include_directories(NoCutsEdepHist PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(NoCutsEdepHist ${LIB_DIRS})
+
+add_executable(Open2Droot Open2Droot.cpp)
+target_include_directories(Open2Droot PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(Open2Droot ${LIB_DIRS})
