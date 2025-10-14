@@ -58,3 +58,15 @@ target_link_libraries(NoCutsEdepHist ${LIB_DIRS})
 add_executable(Open2Droot Open2Droot.cpp)
 target_include_directories(Open2Droot PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(Open2Droot ${LIB_DIRS})
+
+add_executable(ArbOpen2Droot Open2DArbroot.cpp)
+target_include_directories(ArbOpen2Droot PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(ArbOpen2Droot ${LIB_DIRS})
+
+add_executable(RankPulse PulsedRanking.cpp)
+target_include_directories(RankPulse PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(RankPulse ${LIB_DIRS})
+
+add_executable(RankPulse2 PulsedRanking2.cpp)
+target_include_directories(RankPulse2 PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(RankPulse2 ${LIB_DIRS})
