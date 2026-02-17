@@ -120,13 +120,13 @@ double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a
 
 double xlow = 0.3; //Low range for histogram MeV
 double xhigh = 5; //High range for histogram MeV
-
 double coshigh = 0.54; //0.995; //0.92 //0.54 is the highest angle that can hit UMB, CBEtop, CBEbot
 double coslow = 1; //0.62 //0.8
 double fitlow = 0.5;
 double fithigh = 3.5;
 const Int_t NBins = 50;
-double betacut = 0.8; //Currently we're only doing a beta > 0 cutoff for real data. Beta > 0.8 recommended for sim
+double betahigh = 0.75;
+double betacut = 0.5; //Currently we're only doing a beta > 0 cutoff for real data. Beta > 0.8 recommended for sim
 
 //Full tracker histogram range
 double mpvmin = 0.66;
@@ -170,6 +170,7 @@ for(int l = 0;l<nlayers;l++){
 std::ofstream myfile;
 myfile.open("EdepList.txt");
 myfile << TString::Format( "Filename : %s", reco_path.c_str() )  << endl;
+myfile << TString::Format( "Beta High : %f", betahigh) << endl;
 myfile << TString::Format( "Beta Cut : %f", betacut) << endl;
 myfile << TString::Format( "Total Entries : %i", static_cast<int>(TreeRec->GetEntries()/MainLoopScaleFactor)) << endl;
 myfile << "Layer \t Row \t Mod \t Strip \t NEntries" << endl;
@@ -184,6 +185,7 @@ char text[400]; //This variable is used later to name the plots
 
 //How many entries:
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
+cout << "Beta high " << betahigh << endl;
 cout << "Beta cut " << betacut << endl;
 cout << "MPV range on 2D Full Tracker will be " << mpvmin << " - " << mpvmax << endl;
 
@@ -211,7 +213,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
       	        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
 
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
-		if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut){
+		if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 			//cout << "Event is " << i << endl;
 
 			//-----------EVENT LEVEL CUT APPLIED

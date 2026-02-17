@@ -1,4 +1,5 @@
 //Fitting histlist.root output form Edep excutable
+//
 using namespace std;
 
 #include "langaufun.C"
@@ -46,11 +47,18 @@ sprintf(FilenameRoot,"%s/histlist.root",reco_path.c_str());
 
 cout << FilenameRoot << endl;
 
+//Prepare textile for saving values
+std::ofstream myfile;
+myfile.open("EdepList.txt");
+myfile << TString::Format( "Filename : %s", FilenameRoot )  << endl;
+myfile << "Layer\tRow\tMod\tStrip\tMPV\tSigma\tNEntries" << endl;
+//myfile.close();
+
 TFile *f = TFile::Open(FilenameRoot);
 
 double xlow = 0.3; //Low range for histogram MeV
 double xhigh = 4; //High range for histogram MeV
-double fitlow = 0.5;
+double fitlow = 0.3;
 double fithigh = 3.5;
 const Int_t NBins = 50;
 int numParameter = 4;
@@ -59,12 +67,12 @@ int numParameter = 4;
 const int nstrips = 32;
 const int nmods = 6;
 const int nrows = 6;
-const int nlayers = 6;
+const int nlayers = 7;
 int dt[4] = {3,4,1,2};
 
 //Full tracker histogram range
-double mpvmin = 0.55;
-double mpvmax = 0.75;
+double mpvmin = 0.4;
+double mpvmax = 0.8;
 
 int lyr[nlayers];
 int rw[nrows];
@@ -127,7 +135,8 @@ for(int l = 0; l<nlayers;l++){
                                         hnentries->Fill(r*32+s, l*6+m, h[l][r][m][s]->GetEntries());
 
                                         //mpv[r*32+s][l*6+m] = g1[l][r][m][s]->GetParameter(1); //Save the calculated MPV, it will be used for the histogram
-                                        //myfile << (TString::Format(    "%i \t %i \t %i \t %i \t %f \t %f \t %i \n",l,r,m,s,g1[l][r][m][s]->GetParameter(1),g1[l][r][m][s]->GetParameter(2), static_cast<int>(h[l][r][m][s]->GetEntries())   ));
+                                        myfile << l << "\t" << r << "\t" << m << "\t" << s << "\t" << std::fixed << std::setprecision(3) << g1[l][r][m][s]->GetParameter(1) << "\t" << g1[l][r][m][s]->GetParameter(3) << "\t" << std::setprecision(0) << h[l][r][m][s]->GetEntries() << endl;
+                                        //myfile << (TString::Format(    "%i \t %i \t %i \t %i \t %f \t %f \t %i \n",l,r,m,s,g1[l][r][m][s]->GetParameter(1),g1[l][r][m][s]->GetParameter(3), static_cast<int>(h[l][r][m][s]->GetEntries())   ));
 
                                 }
 
@@ -142,6 +151,8 @@ for(int l = 0; l<nlayers;l++){
                 }
         }
 }
+
+myfile.close();
 
 TCanvas * c1 = new TCanvas("c1", "c1", 200, 10, 900, 900);
 c1->SetLeftMargin(0.1);

@@ -74,3 +74,11 @@ target_link_libraries(RankPulse2 ${LIB_DIRS})
 add_executable(OneHist TrackerOneHist.cpp)
 target_include_directories(OneHist PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(OneHist ${LIB_DIRS})
+
+add_executable(OneDet OneDetHist.cpp)
+target_include_directories(OneDet PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(OneDet ${LIB_DIRS})
+
+add_executable(Zedep ChargeMCEdep.cpp)
+target_include_directories(Zedep PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(Zedep ${LIB_DIRS})

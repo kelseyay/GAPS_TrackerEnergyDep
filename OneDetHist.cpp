@@ -15,6 +15,7 @@ using namespace std;
 #include <stdlib.h>
 #include "TH1.h"
 #include "TCanvas.h"
+#include "langaufun.C"
 
 //FIXME: does this work on mac?
 #include <sys/stat.h>
@@ -125,16 +126,29 @@ double coshigh = 0.54; //0.995; //0.92 //0.54 is the highest angle that can hit 
 double coslow = 1; //0.62 //0.8
 double fitlow = 0.5;
 double fithigh = 3.5;
+int numParameter = 4;
 const Int_t NBins = 50;
-double betahigh = 1;
-double betacut = 0.8; //Currently we're only doing a beta > 0 cutoff for real data. Beta > 0.8 recommended for sim
+double betahigh = 0.75;
+double betacut = 0.5; //Currently we're only doing a beta > 0 cutoff for real data. Beta > 0.8 recommended for sim
 
 //Full tracker histogram range
 double mpvmin = 0.66;
 double mpvmax = 0.75;
 
+int l = 0;
+int r = 0;
+int m = 0;
+int d = 3;
+
 TH1F * hedep;
 hedep = new TH1F ("h0", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
+TF1 * g1;
+g1 = new TF1("f_landau_gauss",langaufun,fitlow,fithigh,numParameter);
+g1->SetParameter(0, 0.1);
+g1->SetParameter(1, 0);
+g1->SetParameter(2, 1000);
+g1->SetParameter(3, 1);
+
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
@@ -193,7 +207,16 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 					unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig);
 					if(GGeometryObject::IsTrackerVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TrackerCut){
 
-							hedep->Fill(  (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))   );
+					    int layer = GGeometryObject::GetTrackerLayer(VolumeId);
+						int sdmod = GGeometryObject::GetLayerModule(VolumeId);
+						int det = GGeometryObject::GetModuleDetector(VolumeId);
+						int sdstrip = GGeometryObject::GetDetectorStrip(VolumeId);
+
+						int row = getrow(layer,sdmod);
+						int mod = getmod(layer,sdmod);
+						int strip = getch(layer, det, sdstrip);
+
+						if(layer == l && row == r && mod == m && det == d) {hedep->Fill(  (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))   );}
 
 					} //Closed bracket for Tracker volume and tracker cutoff
 
@@ -216,6 +239,8 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 //Histogram section
 //--------------------------------------
 
+TList *hlist = new TList();
+
 //Histogram for NEntries at a strip level
 TCanvas * c1 = new TCanvas("c2", "c2", 200, 10, 900, 900);
 c1->SetLeftMargin(0.1);
@@ -230,7 +255,13 @@ gPad->SetGridx(1);
 gPad->SetGridy(1);
 gPad->SetLogy(1);
 
+hlist->Add(hedep);
+hedep->Fit(g1,"R");
 hedep->Draw();
+
+TFile *f = new TFile("histlist.root","RECREATE");
+hlist->Write();
+f->Close();
 
 string title = "OneHistFullTracker";
 char histname[400];
