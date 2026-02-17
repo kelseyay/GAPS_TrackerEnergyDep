@@ -58,14 +58,12 @@ parser->Parse();
 string reco_path = parser->GetOption<string>("in_path");
 string out_path = parser->GetOption<string>("out_file");
 cout << reco_path << endl;
-//sprintf(FilenameRoot,"%s/%s*.root",argv[1], argv[2]);
-//cout << argv[1] << endl;
 
 char FilenameRoot[400];
 sprintf(FilenameRoot,"%s*.root",reco_path.c_str());
-//sprintf(FilenameRoot,reco_path.c_str()); //210 simu data on my computer!
 cout << FilenameRoot << endl;
 
+//Prepare reconstructed event
 CEventRec* Event = new CEventRec(); //New reconstructed event
 TChain * TreeRec = new TChain("TreeRec"); //New TreeRec Tchain object (this is new to me)
 TreeRec->SetBranchAddress("Rec", &Event); //Set the branch address using Event (defined above)
@@ -100,6 +98,14 @@ double mpvmax = 0.75;
 double TofAngleCorrectedMip = 0.82;
 double TrackerAngleCorrectedMip = 0.57;
 
+int alphactr = 0;
+int pctr = 0;
+int muctr = 0;
+
+//Trying simulated:
+//double TofAngleCorrectedMip = 1;
+//double TrackerAngleCorrectedMip = 1;
+
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
 
@@ -109,6 +115,12 @@ char text[400]; //This variable is used later to name the plots
 
 TH1D * HTruncatedMeanEnergyDepositionMip = Plotting.DefineTH1D("HTruncatedMeanEnergyDepositionMip",100, 0, 10, "truncated mean energy deposition downgoing MIP [MIP]", "entries", 0.5, 1e4);
 TH1D * HChargeMip = Plotting.DefineTH1D("HChargeMip",200, 0, 6, "particle charge for downgoing MIP", "entries", 0.5, 1e4);
+
+TH2D * HGenB_vs_B2Z2 = new TH2D("HGenB_vs_B2Z2","Generated Beta^2 + Z^2 vs Beta",50,betacut - 0.1, betahigh + 0.1,50, 1 + pow(betacut,2) - 0.5, 4 + pow(betahigh,2) + 0.5);
+TH2D * HRecB_vs_B2Z2 = new TH2D("HGenB_vs_B2Z2","Rec_Beta^2 + Calc_Z^2 vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1,50, 1 + pow(betacut,2) - 0.5, 8 + pow(betahigh,2) + 0.5);
+TH2D * HGenB_vs_GenB2CalZ2 = new TH2D("HGenB_vs_GenB2CalcZ2","Gen_Beta^2 + Calc_Z^2 vs Gen_Beta",50,betacut - 0.1, betahigh + 0.1,50, 1 + pow(betacut,2) - 0.5, 8 + pow(betahigh,2) + 0.5);
+TH2D * HRecB_vs_RecB2GenZ2 = new TH2D("HRecB_vs_RecB2GenZ2","Rec_Beta^2 + Gen_Z^2 vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1,50, 1 + pow(betacut,2) - 0.5, 8 + pow(betahigh,2) + 0.5);
+
 //TH1D * hedep;
 //hedep = new TH1D ("h0", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
 
@@ -126,8 +138,8 @@ TreeMC->GetEntry(0);
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 
 //Using i to loop over every event in the tree
-for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
-//for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
+//for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
+for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
     TreeRec->GetEntry(i);
     TreeMC->GetEntry(i);
 
@@ -146,9 +158,11 @@ for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
       	        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
 
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
-		//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
-		if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) < -coshigh && Event->GetPrimaryBetaGenerated()*Event->GetPrimaryMomentumDirectionGenerated()[2] < 0 && fabs(Event->GetPrimaryBetaGenerated()) >  betacut && fabs(Event->GetPrimaryBetaGenerated()) <  betahigh ){
+		if(pt != nullptr && -fabs(MCEvent->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(MCEvent->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && MCEvent->GetPrimaryBeta()*MCEvent->GetPrimaryMomentumDirection()[2] < 0 && fabs(MCEvent->GetPrimaryBeta()) >  betacut && fabs(MCEvent->GetPrimaryBeta()) <  betahigh ){
+		//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*MCEvent->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
+		//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) < -coshigh && Event->GetPrimaryBetaGenerated()*Event->GetPrimaryMomentumDirectionGenerated()[2] < 0 && fabs(Event->GetPrimaryBetaGenerated()) >  betacut && fabs(Event->GetPrimaryBetaGenerated()) <  betahigh ){
 
+		    /*
 		    cout << endl;
 		    cout << "Event is " << i << endl;
 			cout << "GetProcessType()? " << MCEvent->GetTrack(0)->GetProcessType()<< endl;
@@ -160,6 +174,7 @@ for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
 			cout << "Generated Beta from MC Tree: " << MCEvent->GetPrimaryBeta() << endl;
 			cout << "Generated Beta from Rec Tree: " << Event->GetPrimaryBetaGenerated() << endl;
 			cout << "Calculated Beta from Rec Tree: " <<  Event->GetPrimaryBeta() << endl << endl;
+			*/
 
 			//-----------EVENT LEVEL CUT APPLIED
 
@@ -167,8 +182,8 @@ for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
 			vector<double> EnergyDepositionMip;
 			for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
                 unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig); //Check the VolumeId of the event
-                cout << "Volume ID is " << VolumeId << " Energy is " << Event->GetTrack(0)->GetEnergyDeposition(isig) << endl;
-                cout << "Volume ID third digit is " << volspec(VolumeId,2,1) << endl;
+                //cout << "Volume ID is " << VolumeId << " Energy is " << Event->GetTrack(0)->GetEnergyDeposition(isig) << endl;
+                //cout << "Volume ID third digit is " << volspec(VolumeId,2,1) << endl;
                 //cout << "volspec(VolumeId,0,3) = " << volspec(VolumeId,0,3) << endl;
                 //cout << "volspec(VolumeId,0,2) = " << volspec(VolumeId,0,2) << endl;
                 //cout << "volspec(VolumeId,3,1) " << volspec(VolumeId,2,1) << endl;
@@ -199,13 +214,25 @@ for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
 
 			}
 
-			for (const auto& element : EnergyDepositionMip) {
-                cout << element << " ";
-			}
-
-			//Do we wantt o only run this on certain tracks? Yeah probably. Can remove the TOF flags. Just run on whatever lol.
+			//Do we want to only run this on certain tracks? Yeah probably. Can remove the TOF flags. Just run on whatever lol.
 			if(/*Umbflag && CBEtopflag && CBEbotflag && */ (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
-				cout << "Event number " << i << " passes the cuts!" << endl;
+				//cout << "Event number " << i << " passes the cuts!" << endl;
+				//cout << "Particle species " << MCEvent->GetTrack(0)->GetPdg() << endl;
+				if(MCEvent->GetTrack(0)->GetPdg() == 1000020040){
+				    alphactr++;
+					HGenB_vs_B2Z2->Fill( MCEvent->GetPrimaryBeta(), 4 +pow(MCEvent->GetPrimaryBeta(),2) );
+					HRecB_vs_RecB2GenZ2->Fill( Event->GetPrimaryBeta(), 4 +pow(Event->GetPrimaryBeta(),2) );
+				}
+				if(MCEvent->GetTrack(0)->GetPdg() == 2212){
+				    pctr++;
+					HGenB_vs_B2Z2->Fill( MCEvent->GetPrimaryBeta(), 1 +pow(MCEvent->GetPrimaryBeta(),2) );
+					HRecB_vs_RecB2GenZ2->Fill( Event->GetPrimaryBeta(), 1 +pow(Event->GetPrimaryBeta(),2) );
+				}
+				if(MCEvent->GetTrack(0)->GetPdg() == 13){
+				    muctr++;
+					HGenB_vs_B2Z2->Fill( MCEvent->GetPrimaryBeta(), 1 +pow(MCEvent->GetPrimaryBeta(),2) );
+					HRecB_vs_RecB2GenZ2->Fill( Event->GetPrimaryBeta(), 1 +pow(Event->GetPrimaryBeta(),2) );
+				}
 
 				//Calculate the truncated mean:
 				//Prepare calculation :o
@@ -214,11 +241,6 @@ for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
 				std::sort(EnergyDepositionMip.begin(), EnergyDepositionMip.begin()+EnergyDepositionMip.size());
 				double TruncatedMeanEnergyDepositionMip = 0;
 				double CtrTruncatedMeanEnergyDepositionMip = 0;
-
-				cout << "Sorted? " << endl;
-				for (const auto& element : EnergyDepositionMip) {
-                cout << element << " ";
-				}
 
 				if(EnergyDepositionMip.size() == 0){ TruncatedMeanEnergyDepositionMip = 0;
 				}else{
@@ -237,6 +259,9 @@ for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
 
 				HTruncatedMeanEnergyDepositionMip->Fill(TruncatedMeanEnergyDepositionMip);
 				HChargeMip->Fill(sqrt(TruncatedMeanEnergyDepositionMip));
+				//cout << "Calculated Z = " << TruncatedMeanEnergyDepositionMip << endl;
+				HRecB_vs_B2Z2->Fill(Event->GetPrimaryBeta(), pow(Event->GetPrimaryBeta(),2) + pow(sqrt(TruncatedMeanEnergyDepositionMip),2) );
+				HGenB_vs_GenB2CalZ2->Fill(MCEvent->GetPrimaryBeta(), pow(MCEvent->GetPrimaryBeta(),2) + pow(sqrt(TruncatedMeanEnergyDepositionMip),2) );
 
 				//No need for another iteration over the events
 
@@ -266,7 +291,12 @@ for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
 //Histogram section
 //--------------------------------------
 
-histplot1d("c1", HChargeMip, "test","xaxis","yaxis");
+histplot1d("c1", HChargeMip, "MIP Charge for "+to_string(alphactr)+" alphas, "+to_string(pctr)+" protons, "+to_string(muctr)+" mu","Charge","NEvents","test");
+histplot2d("c2", HGenB_vs_B2Z2, "Gen_B^2 + Gen_Z^2 versus Gen_B^2","Generated Beta","Generated Z^2 + Generated B^2","NEntries","test2D");
+histplot2d("c3", HRecB_vs_B2Z2, "Rec_B^2 + Calc_Z^2 versus Rec_B^2","Reconstructed Beta","Calculated Z^2 + Reconstructed B^2","NEntries","testrec2D");
+histplot2d("c4", HGenB_vs_GenB2CalZ2, "Gen_B^2 + Calc_Z^2 versus Gen_B^2","Generated Beta","Calculated Z^2 + Generated B^2","NEntries","testGenBCalcZ2D");
+histplot2d("c5", HRecB_vs_RecB2GenZ2, "Rec_B^2 + Gen_Z^2 versus Rec_B^2","Reconstructed Beta","Generated Z^2 + Reconstructed B^2","NEntries","testRecBGenZ2D");
+
 
 cout << endl << "I am done" << endl;
 

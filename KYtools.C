@@ -44,8 +44,7 @@ using namespace Crane::Analysis;
 namespace ca = Crane::Analysis;
 namespace cl = Crane::Common;
 //using Crane::Calibration;
-//
-//To run:
+
 //This function will take in a VolumeID number and then two other numbers that specify which part of the VolumeID you want to interrogate
 //so ideally volspec(VolumeID,0,3) will give you the first three numbers of VolumeID which can tell you which CBE part it is.
 //How to use, volspec(12345,1,4) outputs 234 as an integer for your comparing needs
@@ -64,6 +63,7 @@ int getmod(int sdlayer, int sdmod){
         }
 }
 
+//This function takes the SimpleDet layer adn mod and outputs the row.
 int getrow(int sdlayer, int sdmod){
         if(sdlayer % 2 == 0){
                 return floor(sdmod/6);
@@ -91,13 +91,15 @@ int getch(int sdlayer, int sddet, int sdstrp){
 	else{return -1;}
 }
 
-void histplot1d(string ctitle, TH1D* h1, string title, string xtitle, string ytitle){
+//The function below plots TH1D's without all the blocks and blocks of text. More variables can be added if margins, etc... want to change.
+void histplot1d(string ctitle, TH1D* h1, string title, string xtitle, string ytitle, string savename){
     TCanvas * c1 = new TCanvas(ctitle.c_str(), ctitle.c_str(), 200, 10, 900, 900);
     c1->SetLeftMargin(0.1);
-    c1->SetRightMargin(0.16);
+    c1->SetRightMargin(0.1);
     c1->SetTopMargin(0.1);
     c1->SetBottomMargin(0.1);
 
+    h1->SetTitle(title.c_str());
     h1->GetXaxis()->SetTitle(xtitle.c_str());
     h1->GetYaxis()->SetTitle(ytitle.c_str());
     h1->Draw();
@@ -107,6 +109,26 @@ void histplot1d(string ctitle, TH1D* h1, string title, string xtitle, string yti
     gPad->SetLogy(1);
 
     char histname[400];
-    sprintf(histname, "%s.png",title.c_str());
+    sprintf(histname, "%s.png",savename.c_str());
+    c1->SaveAs(histname);
+}
+
+void histplot2d(string ctitle, TH2D* h1, string title, string xtitle, string ytitle, string ztitle, string savename){
+    TCanvas * c1 = new TCanvas(ctitle.c_str(), ctitle.c_str(), 200, 10, 900, 900);
+    c1->SetLeftMargin(0.1);
+    c1->SetRightMargin(0.16);
+    c1->SetTopMargin(0.1);
+    c1->SetBottomMargin(0.1);
+
+    h1->SetBit(TH1::kNoStats);
+    h1->GetXaxis()->SetTitle(xtitle.c_str());
+    h1->GetYaxis()->SetTitle(ytitle.c_str());
+    h1->GetZaxis()->SetTitle(ztitle.c_str());
+
+    h1->Draw("COLZ");
+    gPad->SetLogz();
+
+    char histname[400];
+    sprintf(histname, "%s.png",savename.c_str());
     c1->SaveAs(histname);
 }
