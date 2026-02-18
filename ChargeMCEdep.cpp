@@ -51,13 +51,30 @@ int main(int argc, char *argv[]){
 GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
-parser->AddCommandLineOption<string>("out_file", "name of output root file", "out.root", "o");
+parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
+parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.8,"l");
+parser->AddCommandLineOption<double>("beta_high", "upper Beta Cut",1,"u");
+parser->AddCommandLineOption<int>("MainloopScale", "Main loop scale factor",1,"m");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
+double betacut = parser->GetOption<double>("beta_low");
+if(betacut <= 0 || betacut >=1){ betacut = 0.8; cout << "Error with low beta choice. Setting Beta low to 0.8" << endl; }
+cout << "beta cut = " << betacut << endl;
+
+double betahigh = parser->GetOption<double>("beta_high");
+if(betahigh <= 0 || betahigh >=2 || betahigh < betacut){ betahigh = 1; cout << "Error with high/low beta choice! Setting Beta upper to 1" << endl; }
+cout << "beta high = " << betahigh << endl;
+
 string reco_path = parser->GetOption<string>("in_path");
 string out_path = parser->GetOption<string>("out_file");
-cout << reco_path << endl;
+cout << "reco_path " << reco_path << endl;
+cout << "out path " << out_path << endl;
+//cout << "out path last string " << out_path[out_path.length()-1] << endl;
+
+if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash!" << endl; out_path = out_path + '/'; }
+
+int MainLoopScaleFactor = parser->GetOption<int>("MainloopScale");
 
 char FilenameRoot[400];
 sprintf(FilenameRoot,"%s*.root",reco_path.c_str());
@@ -75,7 +92,7 @@ TChain * TreeMC = new TChain("TreeMc"); //New TreeMC Tchain object (this is new 
 TreeMC->SetBranchAddress("Mc", &MCEvent); //Set the branch address using Event (defined above)
 TreeMC->Add(FilenameRoot);
 
-int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
+//int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
 double TofCutLow = 0; //No low Tof cut right now
 double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
 
@@ -87,8 +104,6 @@ double coslow = 1; //0.62 //0.8
 double fitlow = 0.5;
 double fithigh = 3.5;
 const Int_t NBins = 50;
-double betahigh = 1.1;
-double betacut = 0.8; //Currently we're only doing a beta > 0 cutoff for real data. Beta > 0.8 recommended for sim
 
 //Full tracker histogram range
 double mpvmin = 0.66;
@@ -101,10 +116,6 @@ double TrackerAngleCorrectedMip = 0.57;
 int alphactr = 0;
 int pctr = 0;
 int muctr = 0;
-
-//Trying simulated:
-//double TofAngleCorrectedMip = 1;
-//double TrackerAngleCorrectedMip = 1;
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
@@ -120,6 +131,10 @@ TH2D * HGenB_vs_GenBGenZ = new TH2D("HGenB_vs_GenBGenZ","Gen_Beta * Gen_Z vs Gen
 TH2D * HRecB_vs_RecBCalcZ = new TH2D("HRecB_vs_RecBCalcZ","Rec_Beta * Calc_Z vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1 );
 TH2D * HGenB_vs_GenBCalcZ = new TH2D("HGenB_vs_GenB2CalcZ2","Gen_Beta * Calc_Z vs Gen_Beta",50, betacut - 0.1, betahigh + 0.1, 50, 0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1 ) ;
 TH2D * HRecB_vs_RecBGenZ = new TH2D("HRecB_vs_RecBGenZ","Rec_Beta * Gen_Z vs Rec_Beta",50, betacut - 0.1, betahigh + 0.1,50,  0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1);
+
+TH2D * HRecB_vs_GenB= new TH2D("HRecB_vs_GenB","Rec_B vs Gen_Beta",50, betacut - 0.1, betahigh + 0.1,50, betacut - 0.5,betahigh + 0.5);
+TH2D * HCalcZ_vs_GenB= new TH2D("HCalcZ_vs_GenB","Calc_Z vs Gen_Beta",50, betacut - 0.1, betahigh + 0.1,50,  0.5 , 3.5);
+
 
 //TH1D * hedep;
 //hedep = new TH1D ("h0", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
@@ -139,7 +154,8 @@ cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/
 
 //Using i to loop over every event in the tree
 //for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
-for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
+//for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
+for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){
     TreeRec->GetEntry(i);
     TreeMC->GetEntry(i);
 
@@ -149,7 +165,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 		bool CBEtopflag = 0;
 		bool CBEbotflag = 0;
 
-		if( ((int)i % (int)ceil(TreeRec->GetEntries()/10)) == 0){
+		if( ((int)i % (int)ceil(TreeRec->GetEntries()/(MainLoopScaleFactor*10))) == 0){
 		    cout << "Event number " << i << endl;
 		}
 
@@ -218,6 +234,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 			if(/*Umbflag && CBEtopflag && CBEbotflag && */ (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
 				//cout << "Event number " << i << " passes the cuts!" << endl;
 				//cout << "Particle species " << MCEvent->GetTrack(0)->GetPdg() << endl;
+				HRecB_vs_GenB->Fill(MCEvent->GetPrimaryBeta(),Event->GetPrimaryBeta());
 				if(MCEvent->GetTrack(0)->GetPdg() == 1000020040){
 				    alphactr++;
 					HGenB_vs_GenBGenZ->Fill( MCEvent->GetPrimaryBeta(), 2*(MCEvent->GetPrimaryBeta())  );
@@ -262,7 +279,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 				//cout << "Calculated Z = " << TruncatedMeanEnergyDepositionMip << endl;
 				HRecB_vs_RecBCalcZ->Fill(Event->GetPrimaryBeta(), (Event->GetPrimaryBeta()) * sqrt(TruncatedMeanEnergyDepositionMip) );
 				HGenB_vs_GenBCalcZ->Fill(MCEvent->GetPrimaryBeta(), (MCEvent->GetPrimaryBeta()) * sqrt(TruncatedMeanEnergyDepositionMip) );
-
+				HCalcZ_vs_GenB->Fill(MCEvent->GetPrimaryBeta(),sqrt(TruncatedMeanEnergyDepositionMip));
 				//No need for another iteration over the events
 
 				/*
@@ -291,12 +308,13 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 //Histogram section
 //--------------------------------------
 
-histplot1d("c1", HChargeMip, "MIP Charge for "+to_string(alphactr)+" alphas, "+to_string(pctr)+" protons, "+to_string(muctr)+" mu","Charge","NEvents","test");
-histplot2d("c2", HGenB_vs_GenBGenZ, "Gen_B * Gen_Z versus Gen_B","Generated Beta","Generated Z * Generated B","NEntries","test2D");
-histplot2d("c3", HRecB_vs_RecBCalcZ, "Rec_B + Calc_Z versus Rec_B","Reconstructed Beta","Calculated Z * Reconstructed B","NEntries","testrec2D");
-histplot2d("c4", HGenB_vs_GenBCalcZ, "Gen_B + Calc_Z versus Gen_B","Generated Beta","Calculated Z * Generated B","NEntries","testGenBCalcZ2D");
-histplot2d("c5", HRecB_vs_RecBGenZ, "Rec_B + Gen_Z versus Rec_B","Reconstructed Beta","Generated Z + Reconstructed B","NEntries","testRecBGenZ2D");
-
+histplot1d("c1", HChargeMip, "MIP Charge for "+to_string(alphactr)+" alphas, "+to_string(pctr)+" protons, "+to_string(muctr)+" mu","Charge","NEvents", out_path + "test");
+histplot2d("c2", HGenB_vs_GenBGenZ, "Gen_B * Gen_Z versus Gen_B","Generated Beta","Generated Z * Generated B","NEntries", out_path + "test2D");
+histplot2d("c3", HRecB_vs_RecBCalcZ, "Rec_B * Calc_Z versus Rec_B","Reconstructed Beta","Calculated Z * Reconstructed B","NEntries", out_path + "testrec2D");
+histplot2d("c4", HGenB_vs_GenBCalcZ, "Gen_B * Calc_Z versus Gen_B","Generated Beta","Calculated Z * Generated B","NEntries",out_path + "testGenBCalcZ2D");
+histplot2d("c5", HRecB_vs_RecBGenZ, "Rec_B * Gen_Z versus Rec_B","Reconstructed Beta","Generated Z * Reconstructed B","NEntries", out_path + "testRecBGenZ2D");
+histplot2d("c6", HCalcZ_vs_GenB, "Calc_Z versus Gen_B","Generated Beta","Calculated Z","NEntries", out_path + "testGenBCalcZ");
+histplot2d("c7",HRecB_vs_GenB,"Rec_B versus Gen_B","Generated Beta", "Reconstructed Beta","NEntries", out_path + "testgenBRecB" );
 
 cout << endl << "I am done" << endl;
 

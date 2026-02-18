@@ -15,6 +15,11 @@ using namespace std;
 #include <stdlib.h>
 #include "TH1.h"
 #include "TCanvas.h"
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <sstream>
+
 
 //FIXME: does this work on mac?
 #include <sys/stat.h>
@@ -44,6 +49,13 @@ using namespace Crane::Analysis;
 namespace ca = Crane::Analysis;
 namespace cl = Crane::Common;
 //using Crane::Calibration;
+
+//Function for rounding a double or float to some number of decimal points before making it a string.
+string roundstr_d(double value, int precision){
+    ostringstream oss;
+    oss << std::fixed << std::setprecision(precision) << value;
+    return oss.str();
+}
 
 //This function will take in a VolumeID number and then two other numbers that specify which part of the VolumeID you want to interrogate
 //so ideally volspec(VolumeID,0,3) will give you the first three numbers of VolumeID which can tell you which CBE part it is.
@@ -113,6 +125,28 @@ void histplot1d(string ctitle, TH1D* h1, string title, string xtitle, string yti
     c1->SaveAs(histname);
 }
 
+//The function below plots TH1D's without all the blocks and blocks of text. More variables can be added if margins, etc... want to change.
+void histplot1f(string ctitle, TH1F* h1, string title, string xtitle, string ytitle, string savename){
+    TCanvas * c1 = new TCanvas(ctitle.c_str(), ctitle.c_str(), 200, 10, 900, 900);
+    c1->SetLeftMargin(0.1);
+    c1->SetRightMargin(0.1);
+    c1->SetTopMargin(0.1);
+    c1->SetBottomMargin(0.1);
+
+    h1->SetTitle(title.c_str());
+    h1->GetXaxis()->SetTitle(xtitle.c_str());
+    h1->GetYaxis()->SetTitle(ytitle.c_str());
+    h1->Draw();
+
+    gPad->SetGridx(1);
+    gPad->SetGridy(1);
+    gPad->SetLogy(1);
+
+    char histname[400];
+    sprintf(histname, "%s.png",savename.c_str());
+    c1->SaveAs(histname);
+}
+
 void histplot2d(string ctitle, TH2D* h1, string title, string xtitle, string ytitle, string ztitle, string savename){
     TCanvas * c1 = new TCanvas(ctitle.c_str(), ctitle.c_str(), 200, 10, 900, 900);
     c1->SetLeftMargin(0.1);
@@ -120,6 +154,7 @@ void histplot2d(string ctitle, TH2D* h1, string title, string xtitle, string yti
     c1->SetTopMargin(0.1);
     c1->SetBottomMargin(0.1);
 
+    h1->SetTitle(title.c_str());
     h1->SetBit(TH1::kNoStats);
     h1->GetXaxis()->SetTitle(xtitle.c_str());
     h1->GetYaxis()->SetTitle(ytitle.c_str());

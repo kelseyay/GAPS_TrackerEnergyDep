@@ -82,3 +82,7 @@ target_link_libraries(OneDet ${LIB_DIRS})
 add_executable(Zedep ChargeMCEdep.cpp)
 target_include_directories(Zedep PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(Zedep ${LIB_DIRS})
+
+add_executable(Ledep MCEdepLayers.cpp)
+target_include_directories(Ledep PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(Ledep ${LIB_DIRS})
