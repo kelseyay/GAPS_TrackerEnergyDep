@@ -116,10 +116,10 @@ char text[400]; //This variable is used later to name the plots
 TH1D * HTruncatedMeanEnergyDepositionMip = Plotting.DefineTH1D("HTruncatedMeanEnergyDepositionMip",100, 0, 10, "truncated mean energy deposition downgoing MIP [MIP]", "entries", 0.5, 1e4);
 TH1D * HChargeMip = Plotting.DefineTH1D("HChargeMip",200, 0, 6, "particle charge for downgoing MIP", "entries", 0.5, 1e4);
 
-TH2D * HGenB_vs_B2Z2 = new TH2D("HGenB_vs_B2Z2","Generated Beta^2 + Z^2 vs Beta",50,betacut - 0.1, betahigh + 0.1,50, 1 + pow(betacut,2) - 0.5, 4 + pow(betahigh,2) + 0.5);
-TH2D * HRecB_vs_B2Z2 = new TH2D("HGenB_vs_B2Z2","Rec_Beta^2 + Calc_Z^2 vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1,50, 1 + pow(betacut,2) - 0.5, 8 + pow(betahigh,2) + 0.5);
-TH2D * HGenB_vs_GenB2CalZ2 = new TH2D("HGenB_vs_GenB2CalcZ2","Gen_Beta^2 + Calc_Z^2 vs Gen_Beta",50,betacut - 0.1, betahigh + 0.1,50, 1 + pow(betacut,2) - 0.5, 8 + pow(betahigh,2) + 0.5);
-TH2D * HRecB_vs_RecB2GenZ2 = new TH2D("HRecB_vs_RecB2GenZ2","Rec_Beta^2 + Gen_Z^2 vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1,50, 1 + pow(betacut,2) - 0.5, 8 + pow(betahigh,2) + 0.5);
+TH2D * HGenB_vs_GenBGenZ = new TH2D("HGenB_vs_GenBGenZ","Gen_Beta * Gen_Z vs Gen_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1 );
+TH2D * HRecB_vs_RecBCalcZ = new TH2D("HRecB_vs_RecBCalcZ","Rec_Beta * Calc_Z vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1 );
+TH2D * HGenB_vs_GenBCalcZ = new TH2D("HGenB_vs_GenB2CalcZ2","Gen_Beta * Calc_Z vs Gen_Beta",50, betacut - 0.1, betahigh + 0.1, 50, 0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1 ) ;
+TH2D * HRecB_vs_RecBGenZ = new TH2D("HRecB_vs_RecBGenZ","Rec_Beta * Gen_Z vs Rec_Beta",50, betacut - 0.1, betahigh + 0.1,50,  0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1);
 
 //TH1D * hedep;
 //hedep = new TH1D ("h0", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
@@ -220,18 +220,18 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 				//cout << "Particle species " << MCEvent->GetTrack(0)->GetPdg() << endl;
 				if(MCEvent->GetTrack(0)->GetPdg() == 1000020040){
 				    alphactr++;
-					HGenB_vs_B2Z2->Fill( MCEvent->GetPrimaryBeta(), 4 +pow(MCEvent->GetPrimaryBeta(),2) );
-					HRecB_vs_RecB2GenZ2->Fill( Event->GetPrimaryBeta(), 4 +pow(Event->GetPrimaryBeta(),2) );
+					HGenB_vs_GenBGenZ->Fill( MCEvent->GetPrimaryBeta(), 2*(MCEvent->GetPrimaryBeta())  );
+					HRecB_vs_RecBGenZ->Fill( Event->GetPrimaryBeta(), 2*(Event->GetPrimaryBeta()) );
 				}
 				if(MCEvent->GetTrack(0)->GetPdg() == 2212){
 				    pctr++;
-					HGenB_vs_B2Z2->Fill( MCEvent->GetPrimaryBeta(), 1 +pow(MCEvent->GetPrimaryBeta(),2) );
-					HRecB_vs_RecB2GenZ2->Fill( Event->GetPrimaryBeta(), 1 +pow(Event->GetPrimaryBeta(),2) );
+					HGenB_vs_GenBGenZ->Fill( MCEvent->GetPrimaryBeta(), 1*(MCEvent->GetPrimaryBeta()) );
+					HRecB_vs_RecBGenZ->Fill( Event->GetPrimaryBeta(), 1*(Event->GetPrimaryBeta()) );
 				}
 				if(MCEvent->GetTrack(0)->GetPdg() == 13){
 				    muctr++;
-					HGenB_vs_B2Z2->Fill( MCEvent->GetPrimaryBeta(), 1 +pow(MCEvent->GetPrimaryBeta(),2) );
-					HRecB_vs_RecB2GenZ2->Fill( Event->GetPrimaryBeta(), 1 +pow(Event->GetPrimaryBeta(),2) );
+					HGenB_vs_GenBGenZ->Fill( MCEvent->GetPrimaryBeta(), 1*(MCEvent->GetPrimaryBeta()) );
+					HRecB_vs_RecBGenZ->Fill( Event->GetPrimaryBeta(), 1*(Event->GetPrimaryBeta()) );
 				}
 
 				//Calculate the truncated mean:
@@ -260,8 +260,8 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 				HTruncatedMeanEnergyDepositionMip->Fill(TruncatedMeanEnergyDepositionMip);
 				HChargeMip->Fill(sqrt(TruncatedMeanEnergyDepositionMip));
 				//cout << "Calculated Z = " << TruncatedMeanEnergyDepositionMip << endl;
-				HRecB_vs_B2Z2->Fill(Event->GetPrimaryBeta(), pow(Event->GetPrimaryBeta(),2) + pow(sqrt(TruncatedMeanEnergyDepositionMip),2) );
-				HGenB_vs_GenB2CalZ2->Fill(MCEvent->GetPrimaryBeta(), pow(MCEvent->GetPrimaryBeta(),2) + pow(sqrt(TruncatedMeanEnergyDepositionMip),2) );
+				HRecB_vs_RecBCalcZ->Fill(Event->GetPrimaryBeta(), (Event->GetPrimaryBeta()) * sqrt(TruncatedMeanEnergyDepositionMip) );
+				HGenB_vs_GenBCalcZ->Fill(MCEvent->GetPrimaryBeta(), (MCEvent->GetPrimaryBeta()) * sqrt(TruncatedMeanEnergyDepositionMip) );
 
 				//No need for another iteration over the events
 
@@ -292,10 +292,10 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 //--------------------------------------
 
 histplot1d("c1", HChargeMip, "MIP Charge for "+to_string(alphactr)+" alphas, "+to_string(pctr)+" protons, "+to_string(muctr)+" mu","Charge","NEvents","test");
-histplot2d("c2", HGenB_vs_B2Z2, "Gen_B^2 + Gen_Z^2 versus Gen_B^2","Generated Beta","Generated Z^2 + Generated B^2","NEntries","test2D");
-histplot2d("c3", HRecB_vs_B2Z2, "Rec_B^2 + Calc_Z^2 versus Rec_B^2","Reconstructed Beta","Calculated Z^2 + Reconstructed B^2","NEntries","testrec2D");
-histplot2d("c4", HGenB_vs_GenB2CalZ2, "Gen_B^2 + Calc_Z^2 versus Gen_B^2","Generated Beta","Calculated Z^2 + Generated B^2","NEntries","testGenBCalcZ2D");
-histplot2d("c5", HRecB_vs_RecB2GenZ2, "Rec_B^2 + Gen_Z^2 versus Rec_B^2","Reconstructed Beta","Generated Z^2 + Reconstructed B^2","NEntries","testRecBGenZ2D");
+histplot2d("c2", HGenB_vs_GenBGenZ, "Gen_B * Gen_Z versus Gen_B","Generated Beta","Generated Z * Generated B","NEntries","test2D");
+histplot2d("c3", HRecB_vs_RecBCalcZ, "Rec_B + Calc_Z versus Rec_B","Reconstructed Beta","Calculated Z * Reconstructed B","NEntries","testrec2D");
+histplot2d("c4", HGenB_vs_GenBCalcZ, "Gen_B + Calc_Z versus Gen_B","Generated Beta","Calculated Z * Generated B","NEntries","testGenBCalcZ2D");
+histplot2d("c5", HRecB_vs_RecBGenZ, "Rec_B + Gen_Z versus Rec_B","Reconstructed Beta","Generated Z + Reconstructed B","NEntries","testRecBGenZ2D");
 
 
 cout << endl << "I am done" << endl;
