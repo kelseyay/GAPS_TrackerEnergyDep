@@ -47,6 +47,10 @@ add_executable(TellMe TellMe.cpp)
 target_include_directories(TellMe PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(TellMe ${LIB_DIRS})
 
+add_executable(RecTellMe RecTellMe.cpp)
+target_include_directories(RecTellMe PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(RecTellMe ${LIB_DIRS})
+
 add_executable(FitHist LGFitHist.cpp)
 target_include_directories(FitHist PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(FitHist ${LIB_DIRS})
@@ -83,6 +87,18 @@ add_executable(Zedep ChargeMCEdep.cpp)
 target_include_directories(Zedep PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(Zedep ${LIB_DIRS})
 
+add_executable(DZedep ChargeDataEdep.cpp)
+target_include_directories(DZedep PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(DZedep ${LIB_DIRS})
+
 add_executable(Ledep MCEdepLayers.cpp)
 target_include_directories(Ledep PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(Ledep ${LIB_DIRS})
+
+add_executable(MCCutEff CutsMCEdep.cpp)
+target_include_directories(MCCutEff PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(MCCutEff ${LIB_DIRS})
+
+add_executable(RecCutEff CutsRecEdep.cpp)
+target_include_directories(RecCutEff PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(RecCutEff ${LIB_DIRS})
