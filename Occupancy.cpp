@@ -105,7 +105,8 @@ char text[400]; //This variable is used later to name the plots
 
 //2D Histos
 //Currently just two histograms, one for Umbrella, one for CBE
-TH2D* HTofUmbOccu = Plotting.DefineTH2D("HTofUmbOccu", 84, -1950, 1950, 84, -1950, 1950, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 2, TreeRec->GetEntries()/(MainLoopScaleFactor*ysc));
+//TH2D* HTofUmbOccu = Plotting.DefineTH2D("HTofUmbOccu", 84, -1950, 1950, 84, -1950, 1950, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 2, TreeRec->GetEntries()/(MainLoopScaleFactor*ysc));
+TH2D* HTofUmbOccu = Plotting.DefineTH2D("HTofUmbOccu", 168, -2000, 2000, 168, -2000, 2000, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 2, TreeRec->GetEntries()/(MainLoopScaleFactor*ysc));
 TH2D* HTofCBEtopOccu = Plotting.DefineTH2D("HTofCBEtopOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*ysc));
 TH2D* HTofCBEbotOccu = Plotting.DefineTH2D("HTofCBEbotOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*ysc));
 
@@ -188,18 +189,15 @@ HTofUmbOccu->GetYaxis()->SetTitleOffset(2);
 HTofUmbOccu->GetZaxis()->SetTitle("Number of Entries");
 
 HTofUmbOccu->Draw("COLZ");
-//gStyle->SetTitleAlign(33);
-//gStyle->SetTitleY(.99);
-//gStyle->SetTitleX(.80);
 gPad->SetLogz();
+
+HTofUmbOccu->SaveAs( (out_path + "HTofUmbOccu.root").c_str() );
+HTofCBEtopOccu->SaveAs( (out_path + "HTofCBEtopOccu.root").c_str() );
+HTofCBEbotOccu->SaveAs( (out_path + "HTofCBEbotOccu.root").c_str() );
 
 char histname[400];
 string TofUmbTitle = out_path + "TofUmbOccu";
-sprintf(histname, "%s.root",TofUmbTitle.c_str());
-c1->SaveAs(histname);
 sprintf(histname, "%s.png",TofUmbTitle.c_str());
-c1->SaveAs(histname);
-sprintf(histname, "%s.pdf",TofUmbTitle.c_str());
 c1->SaveAs(histname);
 
 TCanvas * c2 = new TCanvas("c2", "c2", 200, 10, 900, 900);
@@ -216,11 +214,7 @@ HTofCBEtopOccu->Draw("COLZ");
 gPad->SetLogz();
 
 string TofCBEtopTitle =  out_path + "TofCBEtopOccu";
-sprintf(histname, "%s.root",TofCBEtopTitle.c_str());
-c2->SaveAs(histname);
 sprintf(histname, "%s.png",TofCBEtopTitle.c_str());
-c2->SaveAs(histname);
-sprintf(histname, "%s.pdf",TofCBEtopTitle.c_str());
 c2->SaveAs(histname);
 
 TCanvas * c3 = new TCanvas("c3", "c3", 200, 10, 900, 900);
@@ -237,13 +231,8 @@ HTofCBEbotOccu->Draw("COLZ");
 gPad->SetLogz();
 
 string TofCBEbotTitle = out_path +  "TofCBEbotOccu";
-sprintf(histname, "%s.root",TofCBEbotTitle.c_str());
-c3->SaveAs(histname);
 sprintf(histname, "%s.png",TofCBEbotTitle.c_str());
 c3->SaveAs(histname);
-sprintf(histname, "%s.pdf",TofCBEbotTitle.c_str());
-c3->SaveAs(histname);
-
 
 cout << endl << "I am done" << endl;
 return 1;

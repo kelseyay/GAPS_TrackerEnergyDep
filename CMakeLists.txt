@@ -102,3 +102,7 @@ target_link_libraries(MCCutEff ${LIB_DIRS})
 add_executable(RecCutEff CutsRecEdep.cpp)
 target_include_directories(RecCutEff PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(RecCutEff ${LIB_DIRS})
+
+add_executable(OccuOpen OpenOccu.cpp)
+target_include_directories(OccuOpen PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(OccuOpen ${LIB_DIRS})
