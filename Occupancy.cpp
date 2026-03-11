@@ -60,11 +60,16 @@ GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "out.root", "o");
+parser->AddCommandLineOption<int>("ysc", "Scale factor y axis", 1, "s");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
 string reco_path = parser->GetOption<string>("in_path");
 string out_path = parser->GetOption<string>("out_file");
+int ysc = parser->GetOption<int>("ysc");
+
+cout << "out path " << out_path << endl;
+if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash!" << endl; out_path = out_path + '/'; }
 
 cout << reco_path << endl;
 
@@ -100,9 +105,9 @@ char text[400]; //This variable is used later to name the plots
 
 //2D Histos
 //Currently just two histograms, one for Umbrella, one for CBE
-TH2D* HTofUmbOccu = Plotting.DefineTH2D("HTofUmbOccu", 84, -1950, 1950, 84, -1950, 1950, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 0.5, TreeRec->GetEntries()/(MainLoopScaleFactor*500));
-TH2D* HTofCBEtopOccu = Plotting.DefineTH2D("HTofCBEtopOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 0.5, TreeRec->GetEntries()/(MainLoopScaleFactor*500));
-TH2D* HTofCBEbotOccu = Plotting.DefineTH2D("HTofCBEbotOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 0.5, TreeRec->GetEntries()/(MainLoopScaleFactor*500));
+TH2D* HTofUmbOccu = Plotting.DefineTH2D("HTofUmbOccu", 84, -1950, 1950, 84, -1950, 1950, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 2, TreeRec->GetEntries()/(MainLoopScaleFactor*ysc));
+TH2D* HTofCBEtopOccu = Plotting.DefineTH2D("HTofCBEtopOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*ysc));
+TH2D* HTofCBEbotOccu = Plotting.DefineTH2D("HTofCBEbotOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*ysc));
 
 //Now we can go over the loop
 TreeRec->GetEntry(0);
@@ -112,6 +117,10 @@ cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/
 //Using i to loop over every event in the tree
 for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
         TreeRec->GetEntry(i);
+
+        if( ((int)i % (int)ceil(TreeRec->GetEntries()/(MainLoopScaleFactor*10))) == 0){
+		    cout << "Event number " << i << endl;
+		}
 
         //Cuts are implemented in this chunk:
         if(Event->GetNTracks() == 1){  //First select the single track event
@@ -185,7 +194,7 @@ HTofUmbOccu->Draw("COLZ");
 gPad->SetLogz();
 
 char histname[400];
-string TofUmbTitle = "TofUmbOccu";
+string TofUmbTitle = out_path + "TofUmbOccu";
 sprintf(histname, "%s.root",TofUmbTitle.c_str());
 c1->SaveAs(histname);
 sprintf(histname, "%s.png",TofUmbTitle.c_str());
@@ -206,7 +215,7 @@ HTofCBEtopOccu->GetZaxis()->SetTitle("Number of Entries");
 HTofCBEtopOccu->Draw("COLZ");
 gPad->SetLogz();
 
-string TofCBEtopTitle = "TofCBEtopOccu";
+string TofCBEtopTitle =  out_path + "TofCBEtopOccu";
 sprintf(histname, "%s.root",TofCBEtopTitle.c_str());
 c2->SaveAs(histname);
 sprintf(histname, "%s.png",TofCBEtopTitle.c_str());
@@ -227,7 +236,7 @@ HTofCBEbotOccu->GetZaxis()->SetTitle("Number of Entries");
 HTofCBEbotOccu->Draw("COLZ");
 gPad->SetLogz();
 
-string TofCBEbotTitle = "TofCBEbotOccu";
+string TofCBEbotTitle = out_path +  "TofCBEbotOccu";
 sprintf(histname, "%s.root",TofCBEbotTitle.c_str());
 c3->SaveAs(histname);
 sprintf(histname, "%s.png",TofCBEbotTitle.c_str());
