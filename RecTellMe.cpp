@@ -108,11 +108,22 @@ for(unsigned int i = 0; i < 10; i+=MainLoopScaleFactor){
     cout << "Event ID? " << Event->GetEventId() << endl;
     cout << "Event Number? " << Event->GetEventNumber() << endl; //Gviz2D is for sure pulling Event number!
     cout << "Trigger size " << Event->GetTriggerSources().size() << endl;
-    cout << "Trigger?? " << Event->GetTriggerSources().at(0) << endl;
-
     for(int k = 0;  k < Event->GetTriggerSources().size(); k++){
-        cout << "Trigger?? " << Event->GetTriggerSources().at(k) << endl;
+        cout << "Trigger?? " << (int)Event->GetTriggerSources().at(k) << endl;
     }
+
+    /*
+    string so = "";
+    for(auto c: Event->GetTriggerSources())so += Form(" %i",(int)c);
+    cout << "so is " << so << endl; //Whoa it worked!
+
+    for (const auto& element : Event->GetTriggerSources()) {
+        std::cout << "element method " << (int)element << " WORKS IF YOU INT IT! ";
+    }*/
+
+    //for(int k = 0;  k < Event->GetTriggerSources().size(); k++){
+    //    cout << "Trigger?? " << Event->GetTriggerSources().at(k) << endl;
+    //}
         //if( TreeMC->GetEntries() % (i+1) == 0){cout << "Time at Event " << i << " = " << Event->GetEventTime() << endl;}
 
 	//CTrackMc* pt = Event->GetPrimaryTrack();
