@@ -87,9 +87,17 @@ add_executable(Zedep ChargeMCEdep.cpp)
 target_include_directories(Zedep PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(Zedep ${LIB_DIRS})
 
+add_executable(Zedep2 ChargeMCEdep2.cpp)
+target_include_directories(Zedep2 PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(Zedep2 ${LIB_DIRS})
+
 add_executable(DZedep ChargeDataEdep.cpp)
 target_include_directories(DZedep PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(DZedep ${LIB_DIRS})
+
+add_executable(DZedep2 ChargeDataEdep2.cpp)
+target_include_directories(DZedep2 PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(DZedep2 ${LIB_DIRS})
 
 add_executable(Ledep MCEdepLayers.cpp)
 target_include_directories(Ledep PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
@@ -106,3 +114,7 @@ target_link_libraries(RecCutEff ${LIB_DIRS})
 add_executable(OccuOpen OpenOccu.cpp)
 target_include_directories(OccuOpen PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(OccuOpen ${LIB_DIRS})
+
+add_executable(TrmvB TrMvsBeta.cpp)
+target_include_directories(TrmvB PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(TrmvB ${LIB_DIRS})

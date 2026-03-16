@@ -149,7 +149,7 @@ void histplot1f(string ctitle, TH1F* h1, string title, string xtitle, string yti
 
 void histplot2d(string ctitle, TH2D* h1, string title, string xtitle, string ytitle, string ztitle, string savename){
     TCanvas * c1 = new TCanvas(ctitle.c_str(), ctitle.c_str(), 200, 10, 900, 900);
-    c1->SetLeftMargin(0.12);
+    c1->SetLeftMargin(0.14);
     c1->SetRightMargin(0.16);
     c1->SetTopMargin(0.1);
     c1->SetBottomMargin(0.1);

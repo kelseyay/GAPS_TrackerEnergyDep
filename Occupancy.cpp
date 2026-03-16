@@ -1,3 +1,5 @@
+//To run, do ./Occupancy -i /home/kelsey/simulations/simdat/ground/251204/ethernet251204_0 -o test -s 1000
+
 using namespace std;
 
 #include <TColor.h>
@@ -44,7 +46,7 @@ using namespace Crane::Analysis;
 namespace ca = Crane::Analysis;
 namespace cl = Crane::Common;
 //using Crane::Calibration;
-//To run, do ./Occupancy -i /home/kelsey/simulations/simdat/simnew/mu-_gaps_triggerlevel1_FTFP_BERT_1744342800_rec.root
+
 //This function will take in a VolumeID number and then two other numbers that specify which part of the VolumeID you want to interrogate
 //so ideally volspec(VolumeID,0,3) will give you the first three numbers of VolumeID which can tell you which CBE part it is.
 //How to use, volspec(12345,1,4) outputs 234 as an integer for your comparing needs
@@ -59,7 +61,7 @@ int main(int argc, char *argv[]){
 GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
-parser->AddCommandLineOption<string>("out_file", "name of output root file", "out.root", "o");
+parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
 parser->AddCommandLineOption<int>("ysc", "Scale factor y axis", 1, "s");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
