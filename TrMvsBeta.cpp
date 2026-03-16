@@ -1,4 +1,4 @@
-//To use: ./OneHist -i /home/kelsey/simulations/simdat/mu/v.2.1.0/mu-_gaps_triggerlevel1_FTFP_BERT_HP_1721258929_rec -o test
+//To use: ./TrmvB -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1 -o test -l 0.6 -u 1 -b 10
 
 using namespace std;
 
@@ -56,8 +56,9 @@ GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
-parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.8,"l");
+parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.2,"l");
 parser->AddCommandLineOption<double>("beta_high", "upper Beta Cut",1,"u");
+parser->AddCommandLineOption<int>("bbins", "number of beta bins",4,"b");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
@@ -65,12 +66,15 @@ string reco_path = parser->GetOption<string>("in_path");
 string out_path = parser->GetOption<string>("out_file");
 double betacut = parser->GetOption<double>("beta_low");
 double betahigh = parser->GetOption<double>("beta_high");
+int bbins = parser->GetOption<int>("bbins");
 
-if(betacut <= 0 || betacut >=1){ betacut = 0.8; cout << "Error with low beta choice. Setting Beta low to 0.8" << endl; }
+if(betacut <= 0 || betacut >=1){ betacut = 0.2; cout << "Error with low beta choice. Setting Beta low to 0.2" << endl; }
 cout << "beta cut = " << betacut << endl;
 
 if(betahigh <= 0 || betahigh >=2 || betahigh < betacut){ betahigh = 1; cout << "Error with high/low beta choice! Setting Beta upper to 1" << endl; }
 cout << "beta high = " << betahigh << endl;
+
+double bwid = (betahigh-betacut)/bbins;
 
 cout << reco_path << endl;
 //sprintf(FilenameRoot,"%s/%s*.root",argv[1], argv[2]);
@@ -92,7 +96,7 @@ int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger me
 double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
 
 double xlow = 0.3; //Low range for histogram MeV
-double xhigh = 5; //High range for histogram MeV
+double xhigh = 20; //High range for histogram MeV
 
 double coshigh = 0.54; //0.995; //0.92 //0.54 is the highest angle that can hit UMB, CBEtop, CBEbot
 double coslow = 1; //0.62 //0.8
@@ -104,8 +108,28 @@ const Int_t NBins = 50;
 double mpvmin = 0.66;
 double mpvmax = 0.75;
 
-TH1F * hedep;
-hedep = new TH1F ("h0", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
+//Prepare textile for saving values
+std::ofstream myfile;
+myfile.open(out_path + "Edep_vs_Beta.txt");
+myfile << TString::Format( "Filename : %s", reco_path.c_str() )  << endl;
+myfile << TString::Format( "Beta High : %f", betahigh) << endl;
+myfile << TString::Format( "Beta Low : %f", betacut) << endl;
+myfile << TString::Format( "Beta Bins : %d", bbins) << endl;
+myfile << "Beta = [" ;
+
+TH1F * htkr[bbins];
+TH1F * htof[bbins];
+
+for(int i = 0; i < bbins; i++){
+    cout << "low " << betacut+bwid*i << endl;
+    cout << "high "<< betacut+bwid*(i+1) << endl;
+    myfile << betacut+bwid*(i+0.5);
+    if(i != bbins - 1) myfile << ",";
+    htkr[i] = new TH1F (("htkr"+to_string(i)).c_str(), ("Edep l Beta " + to_string(betacut+bwid*i) + " - " + to_string(betacut+bwid*(i+1)) ).c_str(), NBins, xlow,xhigh);
+    htof[i] = new TH1F (("htof"+to_string(i)).c_str(), ("Edep l Beta " + to_string(betacut+bwid*i) + " - " + to_string(betacut+bwid*(i+1)) ).c_str(), NBins, xlow,xhigh);
+}
+
+myfile << "]" << endl;
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
@@ -126,8 +150,8 @@ TreeRec->GetEntry(0);
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 
 //Using i to loop over every event in the tree
-for(unsigned int i = 0; i < 914006; i+=MainLoopScaleFactor){
-//for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
+//for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
+for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
     TreeRec->GetEntry(i);
 
 	//Cuts are implemented in this chunk:
@@ -161,12 +185,29 @@ for(unsigned int i = 0; i < 914006; i+=MainLoopScaleFactor){
 			if(/*Umbflag && CBEtopflag && CBEbotflag && */ (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
 				//cout << "Event number " << i << " passes the cuts!" << endl;
 				for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
+				    double beta = Event->GetPrimaryBetaGenerated();
 					unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig);
+					int bbin = (int)floor((beta-betacut)/bwid);
+
+					//cout << "beta " << beta << " bbin " << bbin << endl;
+
+					if(GGeometryObject::IsTofVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig)){
+                    //A hit in the COR or CBE_sides needs to be multiplied by sin(theta) instead of cos(theta)
+                        //cout << "VolumeId " << VolumeId << endl;
+                        if(volspec(VolumeId,2,1) == 0 || volspec(VolumeId,2,1) == 1){
+                            htof[bbin]->Fill( Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()) );
+                            //cout << "Flat paddle hit!! " << endl;
+                        }else{
+                            htof[bbin]->Fill( Event->GetTrack(0)->GetEnergyDeposition(isig)*sqrt(1-pow(Event->GetPrimaryMomentumDirection().CosTheta(),2)) );
+                            //cout << "Vertical paddle hit!! " << endl;
+                        }
+                    }
+
 					if(GGeometryObject::IsTrackerVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TrackerCut){
-
-							hedep->Fill(  (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))   );
-
+							htkr[bbin]->Fill(  (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))   );
+							//cout << "tkr hit! " << endl;
 					} //Closed bracket for Tracker volume and tracker cutoff
+
 
 				} //Closed bracket for iteration over event with TOF cuts
 
@@ -188,10 +229,32 @@ for(unsigned int i = 0; i < 914006; i+=MainLoopScaleFactor){
 //--------------------------------------
 
 
-histplot1f("c1", hedep, "Energy Deposition All Hits Whole Tracker","Energy Deposition x Cos(theta) MeV","NEvents", out_path + "Fulltkr");
+myfile << "EdepTKR = [" ;
+
+for(int i = 0; i < bbins; i++){
+    //cout << "Mean of tkr hist " << i << " = " << htkr[i]->GetMean() << endl;
+    myfile << htkr[i]->GetMean();
+    if(i != bbins - 1) myfile << ",";
+    histplot1f(("ctkr" + to_string(i)).c_str(), htkr[i], ( "Edep Beta " + to_string(betacut+bwid*i) + " - " + to_string(betacut+bwid*(i+1)) ).c_str(),"Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltkr" + to_string(i)).c_str() );
+}
+
+myfile << "]" << endl;
+
+myfile << "EdepTOF = [" ;
+
+for(int i = 0; i < bbins; i++){
+    //cout << "Mean of tkr hist " << i << " = " << htkr[i]->GetMean() << endl;
+    myfile << htof[i]->GetMean();
+    if(i != bbins - 1) myfile << ",";
+    histplot1f(("ctof" + to_string(i)).c_str(), htof[i], ( "Edep Beta " + to_string(betacut+bwid*i) + " - " + to_string(betacut+bwid*(i+1)) ).c_str(),"Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltof" + to_string(i)).c_str() );
+}
+myfile << "]" << endl;
+
 //Histogram for NEntries at a strip level
 
 //--------------------------------------
+
+myfile.close();
 
 cout << endl << "I am done" << endl;
 
