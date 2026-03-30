@@ -63,6 +63,7 @@ parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data f
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
 parser->AddCommandLineOption<int>("ysc", "Scale factor y axis", 1, "s");
+parser->AddCommandLineOption<int>("MainloopScale", "Main loop scale factor",1,"m");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
@@ -121,7 +122,7 @@ cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/
 for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
         TreeRec->GetEntry(i);
 
-        if( ((int)i % (int)ceil(TreeRec->GetEntries()/(MainLoopScaleFactor*10))) == 0){
+        if( ((int)i % (int)ceil(TreeRec->GetEntries()/10) == 0) ){
 		    cout << "Event number " << i << endl;
 		}
 
@@ -172,11 +173,12 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 
                                         }
-                                }
-                        }
+                                }//Close iteration over hits on track
 
-                }
-        }
+                        }//Close TOF flag requirements
+
+                } //Close event level cuts
+        } //Close single track requirement
 }
 
 TCanvas * c1 = new TCanvas("c1", "c1", 200, 10, 900, 900);

@@ -1,5 +1,3 @@
-//How to use: ./MCCutEff -i /home/kelsey/simulations/simdat/mu/v.2.1.2/mu-_gaps_triggerlevel1_FTFP_BERT_1744342800_rec -o test
-
 using namespace std;
 
 #include "KYtools.C"
@@ -48,6 +46,8 @@ using namespace Crane::Analysis;
 namespace ca = Crane::Analysis;
 namespace cl = Crane::Common;
 
+//How to use: ./MCCutEff -i /home/kelsey/simulations/simdat/mu/v.2.1.2/mu-_gaps_triggerlevel1_FTFP_BERT_1744342800_rec -o test
+
 int main(int argc, char *argv[]){
 
 GOptionParser* parser = GOptionParser::GetInstance();
@@ -76,9 +76,6 @@ cout << "out path " << out_path << endl;
 
 if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash!" << endl; out_path = out_path + '/'; }
 
-//TH1F * HCBEtop = new TH1F ("h0", "CBEtop Panel Occupancy", 24, 0,12);
-//TH1F * HCBEbot = new TH1F ("h1", "CBEbot Panel Occupancy", 24, 0,12);
-
 int MainLoopScaleFactor = parser->GetOption<int>("MainloopScale");
 
 char FilenameRoot[400];
@@ -87,7 +84,7 @@ cout << FilenameRoot << endl;
 
 //Prepare textile for saving values
 std::ofstream myfile;
-myfile.open(out_path + "MCTruthCuts.txt");
+myfile.open(out_path + "MCCharge.txt");
 myfile << TString::Format( "Filename : %s", reco_path.c_str() )  << endl;
 myfile << TString::Format( "Beta High : %f", betahigh) << endl;
 myfile << TString::Format( "Beta Low : %f", betacut) << endl;
@@ -127,24 +124,14 @@ const Int_t NBins = 50;
 double TofAngleCorrectedMip = 0.82;
 double TrackerAngleCorrectedMip = 0.57;
 
-int pid = 13; //2212; //13; Mu
-
 int passctr = 0;
 int strkctr = 0;
 
-int MCpassB = 0;
 int MCmust = 0; //Counter for MC true single tracks
 int MCtrktrg = 0; //Counter for MC true single tracks that pass the track trigger
 int MCnosides = 0; //Counter for MC true single tracks that pass the track trigger that have no side hits
 int MCyesumb_ctop_cbot = 0; //Counter for MC true single tracks that pass the track trigger that have no side hits YES umb, cbe_top, cbe_bot hits
 int MCyesumb_ctop_nocbot = 0; //Counter for MC true single tracks that pass the track trigger that have no side hits YES umb, cbe_top, NO cbe_bot hits
-
-int passB = 0; //Counter for reco pass beta
-int must = 0; //Counter for reco single tracks
-int trktrg = 0; //Counter for reco single tracks that pass the track trigger
-int nosides = 0; //Counter for reco single tracks that pass the track trigger that have no side hits
-int yesumb_ctop_cbot = 0; //Counter for reco single tracks that pass the track trigger that have no side hits YES umb, cbe_top, cbe_bot hits
-int yesumb_ctop_nocbot = 0; //Counter for reco single tracks that pass the track trigger that have no side hits YES umb, cbe_top, NO cbe_bot hits
 
 
 //Prepare cuts:
@@ -167,14 +154,12 @@ cout << "Beta cut " << betacut << endl;
 TreeRec->GetEntry(0);
 TreeMC->GetEntry(0);
 
-myfile.open(out_path + "MCTruthCuts.txt",std::ios::app);
-
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 
 //Using i to loop over every event in the tree
-//for(unsigned int i = 0; i < 40; i+=MainLoopScaleFactor){
-//for(unsigned int i = 60500; i < 90600; i+=MainLoopScaleFactor){
-for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //This is not the "correct" way to do this, but it's probably fine. Should be skipping M each time, but that seems to be really slow!!
+for(unsigned int i = 0; i < 40; i+=MainLoopScaleFactor){
+//for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
+//for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //This is not the "correct" way to do this, but it's probably fine. Should be skipping M each time, but that seems to be really slow!!
     TreeRec->GetEntry(i);
     TreeMC->GetEntry(i);
 
@@ -182,7 +167,6 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 
 	if( ((int)i % (int)ceil(TreeRec->GetEntries()/(MainLoopScaleFactor*10))) == 0){
 	    cout << "Event number " << i << endl;
-		cout << Event->GetActiveReconstruction() << endl;
 	}
 
 	CTrackRec* pt = Event->GetPrimaryTrack();
@@ -190,23 +174,22 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
     for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
 
 	//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
-	//if(pt != nullptr && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 	if(pt != nullptr && fabs(MCEvent->GetPrimaryBeta()) >  betacut && fabs(MCEvent->GetPrimaryBeta()) <  betahigh ){
 	//if((pt != nullptr && pt->GetChi2()/pt->GetNdof()) < 3.2 && -fabs(MCEvent->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(MCEvent->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && MCEvent->GetPrimaryBeta()*MCEvent->GetPrimaryMomentumDirection()[2] < 0 && fabs(MCEvent->GetPrimaryBeta()) >  betacut && fabs(MCEvent->GetPrimaryBeta()) <  betahigh ){
 	//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*MCEvent->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 	//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) < -coshigh && Event->GetPrimaryBetaGenerated()*Event->GetPrimaryMomentumDirectionGenerated()[2] < 0 && fabs(Event->GetPrimaryBetaGenerated()) >  betacut && fabs(Event->GetPrimaryBetaGenerated()) <  betahigh ){
 
-	    MCpassB++;
+		    passctr++;
 
 		//-----------EVENT LEVEL CUT APPLIED
-		//cout << endl << "Event " << i << endl;
-		//cout << "MC info " << endl;
-		//cout << "Number of tracks " << MCEvent->GetNTracks() << endl;
-	    vector<int> MCSpec;
-		vector<unsigned int> MCVolid;
-		vector<double> MCEdep;
-		bool MCST = 0; //MC Single track flag
-		double MaxNPEdep = 0; //Maximum energy deposition not from the primary species
+	cout << "Event " << i << endl;
+	cout << "MC info " << endl;
+	cout << "Number of tracks " << MCEvent->GetNTracks() << endl;
+	vector<int> MCSpec;
+	vector<unsigned int> MCVolid;
+	vector<double> MCEdep;
+	bool MCST = 0; //MC Single track flag
+	double MaxNPEdep = 0; //Maximum energy deposition not from the primary species
 
             for(uint t = 0; t < MCEvent->GetNTracks();t++){
                 //cout << "Track is " << t << endl;
@@ -237,69 +220,53 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
             int TrueCBEbotflag = 0;
             int TrueCBEsideflag = 0;
 
-            //cout << endl;
+            cout << endl;
 
-        /*
         for(int k = 0; k < MCVolid.size(); k++){
             if(MCEdep[k] > 0.4)cout << "MC hit: " << MCEdep[k] << " at " << MCVolid[k] << " by " << MCSpec[k] << endl;
-        }*/
+        }
 
         for (int k = 0; k < MCVolid.size(); k++) { //Check to see if there's a significant hit from a non-muon particle
-            if(MCEdep[k] > 0.4 && MCSpec[k] == pid){ MCST = 1;}
-            if(MCEdep[k] > 0.4 && MCSpec[k] != pid){MCST = 0; break;} //cout << "NOT single track MC Event" << endl;
-            }
+            if(MCEdep[k] > 0.4 && MCSpec[k] == 13){ MCST = 1;}
+            if(MCEdep[k] > 0.4 && MCSpec[k] != 13){MCST = 0; cout << "NOT single track MC Event" << endl; break;}
+        }
 
         if(MCST){ //Checking for single tracks
             MCmust++; //Counter for MC true single tracks
-            //cout << "Event " << i << " MC Single track! " << endl;
+            cout << "MC Single track! " << endl;
 
             for (int k = 0; k < MCVolid.size(); k++) {
                 if(MCEdep[k] > 0.4){
-                    //if(volspec(MCVolid[k],0,3) == 111) cout << "MC hit: " << MCEdep[k] << " at " << MCVolid[k] << " by " << MCSpec[k] << endl;
+                    //cout << "MC hit: " << MCEdep[k] << " at " << MCVolid[k] << " by " << MCSpec[k] << endl;
 
                     if(volspec(MCVolid[k],0,3) == 100)TrueUMBflag++;
-                    if(volspec(MCVolid[k],0,3) == 110){ TrueCBEtopflag++; /*cout << "VolumeId " << MCVolid[k] << " CBEtop hit! " << volspec(MCVolid[k],3,4) << endl; HCBEtop->Fill(volspec(MCVolid[k],3,4));*/ }
-                    if(volspec(MCVolid[k],0,3) == 111){ TrueCBEbotflag++;  /*HCBEbot->Fill(volspec(MCVolid[k],3,4));*/ }
-                    if(volspec(MCVolid[k],0,3) == 112 || volspec(MCVolid[k],0,3) == 113 || volspec(MCVolid[k],0,3) == 114 || volspec(MCVolid[k],0,3) == 115 || volspec(MCVolid[k],0,3) == 116)TrueCBEsideflag++;
-                    if(volspec(MCVolid[k],0,3) == 102 || volspec(MCVolid[k],0,3) == 103 || volspec(MCVolid[k],0,3) == 104 || volspec(MCVolid[k],0,3) == 105 || volspec(MCVolid[k],0,3) == 106)TrueCORflag++;
+                    if(volspec(MCVolid[k],0,3) == 110)TrueCBEtopflag++;
+                    if(volspec(MCVolid[k],0,3) == 111)TrueCBEbotflag++;
+                    if(volspec(MCVolid[k],0,3) == 112 || volspec(MCVolid[k],0,3) == 113 || volspec(MCVolid[k],0,3) == 114 || volspec(MCVolid[k],0,3) == 115)TrueCBEsideflag++;
+                    if(volspec(MCVolid[k],0,3) == 102 || volspec(MCVolid[k],0,3) == 103 || volspec(MCVolid[k],0,3) == 104 || volspec(MCVolid[k],0,3) == 105 | volspec(MCVolid[k],0,3) == 106)TrueCORflag++;
                 }
                 //cout << "VID " << MCVolid[k] << " total edep " << MCEdep[k] << endl;
             } //This seems to be a fine way of determining total edeps in the instrument from MC
 
-            //cout << "TrueUMBflag " << TrueUMBflag << endl;
-            //cout << "TrueCORflag " << TrueCORflag << endl;
-            //cout << "TrueCBE_topflag " << TrueCBEtopflag << endl;
-            //cout << "TrueCBE_botflag " << TrueCBEbotflag << endl;
-            //cout << "TrueCBE_sideflag " << TrueCBEsideflag << endl;
-            //cout << endl;
+            cout << "TrueUMBflag " << TrueUMBflag << endl;
+            cout << "TrueCORflag " << TrueCORflag << endl;
+            cout << "TrueCBE_topflag " << TrueCBEtopflag << endl;
+            cout << "TrueCBE_botflag " << TrueCBEbotflag << endl;
+            cout << "TrueCBE_sideflag " << TrueCBEsideflag << endl;
+            cout << endl;
 
-            //Flags checked!
+            //LEFT OFF HERE!!
             if( (TrueUMBflag + TrueCORflag > 0) && (TrueCBEtopflag + TrueCBEbotflag + TrueCBEsideflag > 0)){ //Track trigger
-                MCtrktrg++; //cout << "Track trigger passed! " << endl; //Counter for MC true single tracks that pass the track trigger
-                if(TrueCBEsideflag == 0 && TrueCORflag == 0 ){ //No side TOF hits
-                    MCnosides++; //cout << "Event: " << i << " NO SIDES HIT!" << endl;
-                    if( (TrueUMBflag>0) && (TrueCBEtopflag>0) && (TrueCBEbotflag>0) ) {
-                        MCyesumb_ctop_cbot++;
-                        //myfile << i << "\t" << "Truth: YesUMBCtopCBot" << endl;
-                        //cout << "Event: " << i << " UMB TOP BOT YES!" << endl;
-                    }
-                    if( (TrueUMBflag>0) && (TrueCBEtopflag>0) && (TrueCBEbotflag==0) ){
-                        MCyesumb_ctop_nocbot++;
-                        //myfile << i << "\t" << "Truth: YesUMBCtop NoCBot" << endl;
-                        //cout << "Event: " << i << " UMB TOP NO BOT!" << endl;
-                    }
-                    /*if( (TrueUMBflag>0) && (TrueCBEtopflag==0) && (TrueCBEbotflag>0) ) {
-                        MCyesumb_cbot_nocbot++;
-                        cout << "Event: " << i << " UMB BOT YES TOP NO!" << endl;
-                    }*/
+                MCtrktrg++; cout << "Track trigger passed! " << endl; //Counter for MC true single tracks that pass the track trigger
+                if(TrueCBEsideflag == 0){ //No side TOF hits
+                    MCnosides++; cout << "No sides hit! " << endl;
+                    if( (TrueUMBflag>0) && (TrueCBEtopflag>0) && (TrueCBEbotflag>0) ) {MCyesumb_ctop_cbot++; cout << "UMB TOP BOT YES!" << endl;}
+                    if( (TrueUMBflag>0) && (TrueCBEtopflag>0) && (TrueCBEbotflag==0) ) {MCyesumb_ctop_nocbot++; cout << "UMB TOP NO BOT!" << endl;}
                 }
 
             } //Track trigger satisfied if one hit in outer TOF (UMB or COR) and one hit in innner TOF (any CBE)
 
-        } // End MC single track trigger
-
-        if(Event->GetNTracks() == 1){
-            must++;
+        } // End single track trigger
 
             int UMBflag = 0;
             int CORflag = 0;
@@ -307,7 +274,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
             int CBEbotflag = 0;
             int CBEsideflag = 0;
 
-            //cout << endl;
+            cout << endl;
             //Reconstructed information, fortunately only one track.
              for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
                  unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig);
@@ -315,44 +282,22 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
                      if(volspec(VolumeId,0,3) == 100)UMBflag++;
                      if(volspec(VolumeId,0,3) == 110)CBEtopflag++;
                      if(volspec(VolumeId,0,3) == 111)CBEbotflag++;
-                     if(volspec(VolumeId,0,3) == 112 || volspec(VolumeId,0,3) == 113 || volspec(VolumeId,0,3) == 114 || volspec(VolumeId,0,3) == 115 || volspec(VolumeId,0,3) == 116)CBEsideflag++;
-                     if(volspec(VolumeId,0,3) == 102 || volspec(VolumeId,0,3) == 103 || volspec(VolumeId,0,3) == 104 || volspec(VolumeId,0,3) == 105 || volspec(VolumeId,0,3) == 106)CORflag++;
+                     if(volspec(VolumeId,0,3) == 112 || volspec(VolumeId,0,3) == 113 || volspec(VolumeId,0,3) == 114 || volspec(VolumeId,0,3) == 115)CBEsideflag++;
+                     if(volspec(VolumeId,0,3) == 102 || volspec(VolumeId,0,3) == 103 || volspec(VolumeId,0,3) == 104 || volspec(VolumeId,0,3) == 105 | volspec(VolumeId,0,3) == 106)CORflag++;
                  }
-                 //cout << "Rec: Hit " << isig << " Edep " << Event->GetTrack(0)->GetEnergyDeposition(isig) << " at " << VolumeId << endl;
+                 cout << "Rec: Hit " << isig << " Edep " << Event->GetTrack(0)->GetEnergyDeposition(isig) << " at " << VolumeId << endl;
              }
 
-             //cout << "Event " << i << endl;
-             //cout << "UMBflag " << UMBflag << endl;
-             //cout << "CORflag " << CORflag << endl;
-             //cout << "CBE_topflag " << CBEtopflag << endl;
-             //cout << "CBE_botflag " << CBEbotflag << endl;
-             //cout << "CBE_sideflag " << CBEsideflag << endl;
-             //cout << endl;
+             cout << "UMBflag " << UMBflag << endl;
+             cout << "CORflag " << CORflag << endl;
+             cout << "CBE_topflag " << CBEtopflag << endl;
+             cout << "CBE_botflag " << CBEbotflag << endl;
+             cout << "CBE_sideflag " << CBEsideflag << endl;
+             cout << endl;
 
-
-             //Rec checking flags
-             if( (UMBflag + CORflag > 0) && (CBEtopflag + CBEbotflag + CBEsideflag > 0)){ //Track trigger
-                 trktrg++; //cout << "Track trigger passed! " << endl; //Counter for MC true single tracks that pass the track trigger
-                 if(CBEsideflag == 0 && CORflag == 0 ){ //No side TOF hits
-                     nosides++; //cout << "Event: " << i << " NO SIDES HIT!" << endl;
-                     if( (UMBflag>0) && (CBEtopflag>0) && (CBEbotflag>0) ) {
-                         yesumb_ctop_cbot++;
-                         //myfile << i << "\t" << "Rec: YesUMBCtopCBot" << endl;
-                         //cout << "Event: " << i << " UMB TOP BOT YES!" << endl;
-                     }
-                     if( (UMBflag>0) && (CBEtopflag>0) && (CBEbotflag==0) ){
-                         yesumb_ctop_nocbot++;
-                         //myfile << i << "\t" << "Rec: YesUMBCtop NoCBot" << endl;
-                         //cout << "Event: " << i << " UMB TOP NO BOT!" << endl;
-                     }
-                 } //No sides
-
-             } //Track trigger satisfied if one hit in outer TOF (UMB or COR) and one hit in innner TOF (any CBE)
 
 
 			//-----------EVENT LEVEL CUTS END
-
-            } //Closed bracket for reconstructed single track
 
 		} //Closed bracket for event level cut
 
@@ -360,37 +305,6 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 
 
 myfile.open(out_path + "MCCuts.txt",std::ios::app);
-myfile.close();
-
-cout << "MC Total Events in Beta Range " << MCpassB << endl;
-cout << fixed << setprecision(1) << 100*(float)MCpassB/(float)TreeRec->GetEntries() <<"%" <<  endl;
-cout << "MC Single Track Events " << MCmust << endl;
-cout << fixed << setprecision(1) << 100*(float)MCmust/(float)MCpassB << "%" << endl;
-cout << "MC Track Trigger Satisfied " << MCtrktrg << endl;
-cout << fixed << setprecision(1) << 100*(float)MCtrktrg/(float)MCmust <<"%" <<  endl;
-cout << "MC Track Trigger Satisfied, No sides " << MCnosides << endl;
-cout << fixed << setprecision(1) << 100*(float)MCnosides/(float)MCtrktrg << "%" << endl;
-cout << "MC Track Trigger Satisfied, No sides, UMB, CT, CB " << MCyesumb_ctop_cbot << endl;
-cout << fixed << setprecision(1) << 100*(float)MCyesumb_ctop_cbot/(float)MCnosides <<"%" <<  endl;
-cout << "MC Track Trigger Satisfied, No sides or CB, UMB, CT " << MCyesumb_ctop_nocbot << endl;
-cout << fixed << setprecision(1) << 100*(float)MCyesumb_ctop_nocbot/(float)MCnosides <<"%" <<  endl;
-
-cout << "MC Total Events in Beta Range " << MCpassB << endl;
-cout << fixed << setprecision(1) << 100*(float)MCpassB/(float)TreeRec->GetEntries() <<"%" <<  endl;
-cout << "Reco Single Track Events " << must << endl;
-cout << fixed << setprecision(1) << 100*(float)must/(float)MCpassB << "%" << endl;
-cout << "Reco Track Trigger Satisfied " << trktrg << endl;
-cout << fixed << setprecision(1) << 100*(float)trktrg/(float)must << "%" << endl;
-cout << "Reco Track Trigger Satisfied, No sides " << nosides << endl;
-cout << fixed << setprecision(1) << 100*(float)nosides/(float)trktrg << "%" << endl;
-cout << "Reco Track Trigger Satisfied, No sides, UMB, CT, CB " << yesumb_ctop_cbot << endl;
-cout << fixed << setprecision(1) << 100*(float)yesumb_ctop_cbot/(float)nosides <<"%" <<  endl;
-cout << "Reco Track Trigger Satisfied, No sides or CB, UMB, CT " << yesumb_ctop_nocbot << endl;
-cout << fixed << setprecision(1) << 100*(float)yesumb_ctop_nocbot/(float)nosides <<"%" <<  endl;
-
-//histplot1f("c1", HCBEtop, "CBE top Paddle Occupancy Plot","Paddle Number","NEvents", out_path + "CBE1dOccu");
-//histplot1f("c2", HCBEbot, "CBE bot Paddle Occupancy Plot","Paddle Number","NEvents", out_path + "CBE1dOccu");
-
 myfile.close();
 
 cout << endl << "I am done" << endl;

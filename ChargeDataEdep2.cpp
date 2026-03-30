@@ -1,4 +1,5 @@
-//How to use: ./DZedep2 -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1_FTFP_BERT_175785 -s 1 -t 1 -f 1.12 -k 1.11 -l 0.8 -u 1
+//How to use: ./DZedep2 -i /data1/nextcloud/cra_data/data/2025/production/v26.01/reconstructed/flight/251226/starlink251226_17 -s 0 -t 1 -f 1 -k 1 -r 2 -o test/
+//Also use: ./DZedep2 -i /home/kelsey/simulations/simdat/flight/251226/26.01/starlink251226_1 -s 0 -t 1 -f 1 -k 1 -r 2 -o test/
 
 using namespace std;
 
@@ -105,8 +106,8 @@ TreeRec->Add(FilenameRoot);
 double TofCutLow = 0; //No low Tof cut right now
 double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
 
-double xlow = 0.3; //Low range for histogram MeV
-double xhigh = 5; //High range for histogram MeV
+double xlow = 0.1; //Low range for histogram MeV
+double xhigh = 3; //High range for histogram MeV
 
 double coshigh = 0.54; //0.995; //0.92 //0.54 is the highest angle that can hit UMB, CBEtop, CBEbot
 double coslow = 1; //0.62 //0.8
@@ -139,15 +140,15 @@ float Ztof = 5.574;
 float Atof = 10.3;
 float Ltof = 0.635;
 float rtof = 1.032;
-float Gmctof = 1; //(1/1.1646);
 float Gtofnew = tf; //1/0.9; //(1/0.71);
+//cout << "sqrt(Gtofnew) = " << sqrt(tf) << endl;
 
 float Ztkr = 14;
 float Atkr = 28.3;
 float Ltkr = 0.22;
 float rtkr = 2.33;
-float Gmctkr = 1; //(1/0.928);
 float Gtkrnew = tk; //1; // (1/0.83);
+//cout << "sqrt(Gtkrnew) = " << sqrt(tk) << endl;
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
@@ -158,15 +159,17 @@ char text[400]; //This variable is used later to name the plots
 
 TH1D * HTruncatedMeanEnergyDepositionMip = Plotting.DefineTH1D("HTruncatedMeanEnergyDepositionMip",100, 0, 10, "sqrt(sqrt(truncated mean E))nergy deposition downgoing MIP [MIP]", "entries", 0.5, 1e4);
 TH1D * HChargeMip = Plotting.DefineTH1D("HChargeMip",200, 0.1, 4, "particle charge for downgoing MIP", "entries", 0.5, 1e4);
+TH1D * HTofMult = Plotting.DefineTH1D("HTofMult",200, 0.1, 2, "Multiplicative Factor TOF", "entries", 0.5, 1e4);
+TH1D * HTkrMult = Plotting.DefineTH1D("HTkrMult",200, 0.1, 2, "Multiplicative Factor TKR", "entries", 0.5, 1e4);
 
 //TH2D * HGenB_vs_GenZ = new TH2D("HGenB_vs_GenZ","Gen_Beta * Gen_Z vs Gen_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1 );
-TH2D * HRecB_vs_CalcZ = new TH2D("HRecB_vs_CalcZ","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.5 , 3);
+TH2D * HRecB_vs_CalcZ = new TH2D("HRecB_vs_CalcZ","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 4);
 //TH2D * HTrunM_vs_RecB= new TH2D("HTrunM_vs_RecB","Tr_Mean vs Rec_Beta",50, betacut - 0.1, betahigh + 0.1,50,  0.5 , 3.5);
 
 //TH2D * HRecB_vs_Cal = new TH2D("HRecB_vs_RecBTrunM","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1 );
 
-//TH1D * hedep;
-//hedep = new TH1D ("h0", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
+TH1D * hedep; //Full tracker energy deposition plot
+hedep = new TH1D ("h0", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
 
 
 //How many entries:
@@ -182,9 +185,13 @@ cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/
 
 //Using i to loop over every event in the tree
 //for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
-//for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
-for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //This is not the "correct" way to do this, but it's probably fine. Should be skipping M each time, but that seems to be really slow!!
+for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
+//for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //This is not the "correct" way to do this, but it's probably fine. Should be skipping M each time, but that seems to be really slow!!
     TreeRec->GetEntry(i);
+
+    if( ((int)i % (int)ceil(TreeRec->GetEntries()/(MainLoopScaleFactor*10))) == 0){
+		    cout << "Event number " << i << endl;
+	}
 
 	//Cuts are implemented in this chunk:
 	if(Event->GetNTracks() == 1){  //First select the single track event
@@ -192,10 +199,6 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 		bool Umbflag = 0;
 		bool CBEtopflag = 0;
 		bool CBEbotflag = 0;
-
-		if( ((int)i % (int)ceil(TreeRec->GetEntries()/(MainLoopScaleFactor*10))) == 0){
-		    cout << "Event number " << i << endl;
-		}
 
 		CTrackRec* pt = Event->GetPrimaryTrack();
 		uint pt_index = 0;
@@ -211,7 +214,6 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 		if( pt != nullptr && ( (TRG == 0) || ((int)Event->GetTriggerSources().at(0) == TRG) ) && pt->GetChi2()/pt->GetNdof() < 3.2 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) > betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 		//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*MCEvent->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 		//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) < -coshigh && Event->GetPrimaryBetaGenerated()*Event->GetPrimaryMomentumDirectionGenerated()[2] < 0 && fabs(Event->GetPrimaryBetaGenerated()) >  betacut && fabs(Event->GetPrimaryBetaGenerated()) <  betahigh ){
-		    //cout << endl << "Event is " << i << endl;
 		    //cout << "C/Ndof " << pt->GetChi2()/pt->GetNdof() << endl;
 			//cout << "GPMDCos " << -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) << endl;
 			//cout << "Downwards? " <<  Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] << endl;
@@ -224,6 +226,8 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 			//First iteration over event for flags and EnergyDepositionMip vector filling
 			vector<double> Zevent;
 			double Brec = Event->GetPrimaryBeta();
+			if(Brec > 1){Brec = 0.99;} //Might be smarter to set gamma = to something.
+			//cout << "Brec " << Brec << endl;
 
 			for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
                 unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig); //Check the VolumeId of the event
@@ -237,11 +241,15 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
                     //A hit in the COR or CBE_sides needs to be multiplied by sin(theta) instead of cos(theta)
                     if(volspec(VolumeId,2,1) == 0 || volspec(VolumeId,2,1) == 1){
                         //cout << Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta())/TofAngleCorrectedMip << endl;
-                        Zevent.push_back( Gtofnew*sqrt( (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))*Gmctof*pow(Brec,2)*(Atof/Ztof)*(1/(rtof*Ltof*0.307)) / (log( 1.022*pow(Brec,2) / ((1 - pow(Brec,2))*0.000016*pow(Ztof,0.9) ) ) - pow(Brec,2)) ) );
+                        Zevent.push_back( sqrt((Gtofnew*Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))*pow(Brec,2)*(Atof/Ztof)*(1/(rtof*Ltof*0.307)) / (log( 1.022*pow(Brec,2) / ((1 - pow(Brec,2))*0.000016*pow(Ztof,0.9) ) ) - pow(Brec,2)) ) );
+                        HTofMult->Fill( sqrt(Gtofnew*(Atof/Ztof)*(1/(rtof*Ltof*0.307)) / (log( 1.022*pow(Brec,2) / ((1 - pow(Brec,2))*0.000016*pow(Ztof,0.9) ) ) - pow(Brec,2))) );
+                        //cout << "My factor TOF: " << sqrt( Gtofnew*(Atof/Ztof)*(1/(rtof*Ltof*0.307)) / (log( 1.022*pow(Brec,2) / ((1 - pow(Brec,2))*0.000016*pow(Ztof,0.9) ) ) - pow(Brec,2)) )  << endl;
                         //cout << "FLAT PADDLE HIT" << endl;
                     } else{
                         //cout << Event->GetTrack(0)->GetEnergyDeposition(isig)*sqrt(1-pow(Event->GetPrimaryMomentumDirection().CosTheta(),2))/TofAngleCorrectedMip << endl;
-                        Zevent.push_back( Gtofnew*sqrt( (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(sqrt(1-pow(Event->GetPrimaryMomentumDirection().CosTheta(),2)))) *Gmctof*pow(Brec,2)*(Atof/Ztof)*(1/(rtof*Ltof*0.307)) / (log( 1.022*pow(Brec,2) / ((1 - pow(Brec,2))*0.000016*pow(Ztof,0.9) ) ) - pow(Brec,2)) ));
+                        Zevent.push_back( sqrt( (Gtofnew*Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(sqrt(1-pow(Event->GetPrimaryMomentumDirection().CosTheta(),2)))) *pow(Brec,2)*(Atof/Ztof)*(1/(rtof*Ltof*0.307)) / (log( 1.022*pow(Brec,2) / ((1 - pow(Brec,2))*0.000016*pow(Ztof,0.9) ) ) - pow(Brec,2)) ));
+                        HTofMult->Fill( sqrt(Gtofnew*(Atof/Ztof)*(1/(rtof*Ltof*0.307)) / (log( 1.022*pow(Brec,2) / ((1 - pow(Brec,2))*0.000016*pow(Ztof,0.9) ) ) - pow(Brec,2))) );
+                        //cout << "My factor TOF: " << sqrt( Gtofnew*(Atof/Ztof)*(1/(rtof*Ltof*0.307)) / (log( 1.022*pow(Brec,2) / ((1 - pow(Brec,2))*0.000016*pow(Ztof,0.9) ) ) - pow(Brec,2)) )   << endl;
                         //cout << "VERTICAL PADDLE HIT" << endl;
                     }
                 }
@@ -250,7 +258,9 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 
                 if(TKR && GGeometryObject::IsTrackerVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TrackerCut){
                     //cout << Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta())/TrackerAngleCorrectedMip << endl;
-                    Zevent.push_back(Gtkrnew* sqrt(  (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))*Gmctkr*pow(Brec,2)*(Atkr/Ztkr)*(1/(rtkr*Ltkr*0.307)) / (log( 1.022*pow(Brec,2) / ((1 - pow(Brec,2))*0.000016*pow(Ztkr,0.9) ) ) - pow(Brec,2)) ));
+                    Zevent.push_back(sqrt((Gtkrnew*Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))*pow(Brec,2)*(Atkr/Ztkr)*(1/(rtkr*Ltkr*0.307)) / (log( 1.022*pow(Brec,2) / ((1 - pow(Brec,2))*0.000016*pow(Ztkr,0.9) ) ) - pow(Brec,2)) ));
+                    HTkrMult->Fill( sqrt(Gtkrnew*(Atkr/Ztkr)*(1/(rtkr*Ltkr*0.307)) / (log( 1.022*pow(Brec,2) / ((1 - pow(Brec,2))*0.000016*pow(Ztkr,0.9) ) ) - pow(Brec,2)) )  );
+                    //cout << "My factor TKR: " << sqrt( Gtkrnew*(Atkr/Ztkr)*(1/(rtkr*Ltkr*0.307)) / (log( 1.022*pow(Brec,2) / ((1 - pow(Brec,2))*0.000016*pow(Ztkr,0.9) ) ) - pow(Brec,2)) ) << endl;
                     //cout << "TRACKER HIT" << endl;
                 }
 
@@ -269,32 +279,35 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 				double TrZ = 0;
 				double CtrTrZ = 0;
 
-				if(Zevent.size() == 0){ TrZ = 0;
+				if(Zevent.size() == 0){
+				    TrZ = 0;
 				}else{
 			        for(unsigned int isig = 0; isig < double(Zevent.size())/2; isig++){
 						TrZ += Zevent.at(isig);
 						CtrTrZ++;
 					}
+					if(CtrTrZ == 0){ TrZ = 0;
+					}else{ TrZ /= CtrTrZ;}
+				}
+				if(Zevent.size() == 1) TrZ = Zevent.at(0);
+				HChargeMip->Fill(TrZ);
+				HRecB_vs_CalcZ->Fill(Event->GetPrimaryBeta(),TrZ);
 
-				if(CtrTrZ == 0){ TrZ = 0;
-				}else{ TrZ /= CtrTrZ;}
-
-			}
-
-			if(Zevent.size() == 1) TrZ = Zevent.at(0);
-
-			HChargeMip->Fill(TrZ);
-			HRecB_vs_CalcZ->Fill(Event->GetPrimaryBeta(),TrZ);
+				for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
+				    unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig);
+					if(GGeometryObject::IsTrackerVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TrackerCut){
+						hedep->Fill(  (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))   );
+					} //Closed bracket for Tracker volume and tracker cutoff
+				} //Closed bracket for iteration over event with TOF cuts
 
 			    //cout << "Cuts passed " << endl;
 
-			} //Closed bracket for if statement for cuts
-
+			} //Closed bracket for if statement for TOF cuts
 
 			//-----------EVENT LEVEL CUTS END
 
 
-		} //Closed bracket for event level cut
+		} //Closed bracket for event level cut (beta, cos, pt exists)
 
 	} //Closed bracket for single track cut
 
@@ -309,13 +322,23 @@ myfile.close();
 //Histogram section
 //--------------------------------------
 
+HRecB_vs_CalcZ->SaveAs( (out_path + "HRecB_vs_CalcZ.root").c_str() );
 histplot1d("c1", HChargeMip, ("Charge Distribution Rec Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Charge","NEvents", out_path + "Both");
-histplot2d("c3", HRecB_vs_CalcZ, "Z_calc versus Rec_B","Reconstructed Beta","Z_calc","NEntries", out_path + "BothRrec2D");
+histplot2d("c2", HRecB_vs_CalcZ, "Z_calc versus Rec_B","Reconstructed Beta","Z_calc","NEntries", out_path + "BothRrec2D");
+
+histplot1d("c3", HTofMult, ("Tof Mult Factor " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Factor","NEvents", out_path + "TofFactor");
+cout << "HTofMult Mean " << HTofMult->GetMean() << endl;
+histplot1d("c4", HTkrMult, ("Tkr Mult Factor " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Factor","NEvents", out_path + "TkrFactor");
+cout << "HTkrMult Mean " << HTkrMult->GetMean() << endl;
+histplot1d("c5", hedep, "Tracker Energy Deposition for "+to_string(betacut)+" - "+to_string(betahigh),"Energy Deposit x Cos(theta)","NEvents", out_path + "Hedep");
+cout << "Hedep Max Bin Center = " << hedep->GetBinCenter(hedep->GetMaximumBin()) << endl;
+
+
 //histplot2d("c6", HTrunM_vs_RecB, "sqrt(Tr_Mean) versus Rec_B","Reconstructed Beta","sqrt(truncated mean E)","NEntries", out_path + "BothRecBTrunM");
 //cout << "Max bin is " << HChargeMip->GetMaximumBin() << /*" factor should be " << 1/(HChargeMip->GetMaximumBin()) << */ endl;
 //cout << "Max bin NEntries is " << HChargeMip->GetBinContent(HChargeMip->GetMaximumBin()) << endl;
 cout << "TOF: " << TF << " TKR: " << TKR << endl;
-cout << "Max bin Center is  " << HChargeMip->GetBinCenter(HChargeMip->GetMaximumBin()) << " factor should be " << 1/HChargeMip->GetBinCenter(HChargeMip->GetMaximumBin()) << endl;
+cout << "Max bin Center is  " << HChargeMip->GetBinCenter(HChargeMip->GetMaximumBin()) << " factor should be " << pow(1/HChargeMip->GetBinCenter(HChargeMip->GetMaximumBin()),2) << endl;
 
 cout << endl << "I am done" << endl;
 

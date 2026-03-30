@@ -1,3 +1,5 @@
+//How to use: ./RecCutEff -i /home/kelsey/simulations/simdat/mu/v.2.1.2/mu-_gaps_triggerlevel1_FTFP_BERT_1744342800_rec -o test
+
 using namespace std;
 
 #include "KYtools.C"
@@ -45,8 +47,6 @@ using namespace std;
 using namespace Crane::Analysis;
 namespace ca = Crane::Analysis;
 namespace cl = Crane::Common;
-
-//How to use: ./MCCutEff -i /home/kelsey/simulations/simdat/mu/v.2.1.2/mu-_gaps_triggerlevel1_FTFP_BERT_1744342800_rec -o test
 
 int main(int argc, char *argv[]){
 

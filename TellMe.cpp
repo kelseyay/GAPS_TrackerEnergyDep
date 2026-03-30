@@ -140,6 +140,15 @@ for(unsigned int i = 0; i < 2; i+=MainLoopScaleFactor){
         }
     }
 
+    cout << endl << "All hits? " << endl;
+
+    //All hits, remove on track requirement
+    for(uint isig=0; isig<Event->GetVolumeId().size(); isig++){
+        cout << "Hit " << isig << " VolumrId " << Event->GetVolumeId().at(isig) << " Edep " << Event->GetHitSeries().at(isig).GetTotalEnergyDeposition() << endl;
+        cout << "Position " << Event->GetHitSeries().at(isig).GetPosition().X() << endl;
+    }
+
+    /*
 	cout << endl << "MC info " << endl;
 	cout << "Number of tracks " << MCEvent->GetNTracks() << endl;
 	vector<unsigned int> MCVolid;
@@ -171,15 +180,17 @@ for(unsigned int i = 0; i < 2; i+=MainLoopScaleFactor){
             //cout << "Method 2? " << Event->GetTrack(0)->GetEnergyDeposition().at(isig) << endl;
         }
     } //End loop over tracks
+    */
 
-
+    /*
     cout << endl;
     for (int k = 0; k < MCVolid.size(); k++) {
         cout << "VID " << MCVolid[k] << " total edep " << MCEdep[k] << endl;
     } //This seems to be a fine way of determining total edeps in the instrument from MC
     cout << endl;
+    */
 
-
+    /*
 	if(MCEvent->GetNTracks() >= 0){ //Just output everything right now
 	    //Mmk, got it! Of course the Gviz and Gviewer are code and code is readable! In the SimpleDet tools, the .cc files have the info :3
 	    //If GetNTracks > 1, then there are tracks to iterate over!
@@ -188,8 +199,10 @@ for(unsigned int i = 0; i < 2; i+=MainLoopScaleFactor){
 		    for(unsigned int isig = 0; isig < MCEvent->GetTrack(t)->GetEnergyDeposition().size(); isig++){
 				if(MCEvent->GetTrack(t)->GetEnergyDeposition(isig) > 0){ inttrk++; }
 			}
-			if(inttrk > 1){cool = 1;}
-			inttrk = 0;
+			//if(inttrk > 1){cool = 1;}
+			//inttrk = 0;
+
+
 		    if(cool){
 				cout << "Track is " << t << endl;
 				cout << "GetTrackId()? " << MCEvent->GetTrack(t)->GetTrackId()<< endl; //t is not the same as GetTrackId, interesting!
@@ -212,7 +225,7 @@ for(unsigned int i = 0; i < 2; i+=MainLoopScaleFactor){
 			}
 		}
 
-	}
+	}*/
 
 }
 

@@ -118,3 +118,11 @@ target_link_libraries(OccuOpen ${LIB_DIRS})
 add_executable(TrmvB TrMvsBeta.cpp)
 target_include_directories(TrmvB PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(TrmvB ${LIB_DIRS})
+
+add_executable(SimpleHisto SimpleHisto.cpp)
+target_include_directories(SimpleHisto PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(SimpleHisto ${LIB_DIRS})
+
+add_executable(OccNoCuts OccuNoCuts.cpp)
+target_include_directories(OccNoCuts PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(OccNoCuts ${LIB_DIRS})

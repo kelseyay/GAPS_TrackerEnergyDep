@@ -2,6 +2,7 @@
 //Example how to use, navigate into directory of .root file:
 // /home/kelsey/GAPS_TrackerEnergyDep/build/ArbOpen2Droot -r hsig_pulsed -i . -m 1 -x 10
 
+//This can be retired
 
 //Fitting histlist.root output form Edep excutable
 using namespace std;

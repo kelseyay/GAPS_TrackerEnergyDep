@@ -150,6 +150,23 @@ for(unsigned int i = 0; i < 10; i+=MainLoopScaleFactor){
         }
     }
 
+    if(Event->GetNTracks() == 1){ //Output single track events
+            for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
+                unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig);
+                if(GGeometryObject::IsTrackerVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TrackerCut){
+                int layer = GGeometryObject::GetTrackerLayer(VolumeId);
+                int sdmod = GGeometryObject::GetLayerModule(VolumeId);
+                int det = GGeometryObject::GetModuleDetector(VolumeId);
+                int sdstrip = GGeometryObject::GetDetectorStrip(VolumeId);
+
+                int row = getrow(layer,sdmod);
+                int mod = getmod(layer,sdmod);
+                int strip = getch(layer, det, sdstrip);
+
+                cout << "LRMS " << layer << row << mod << strip << endl;
+            }
+        }
+    }
 
 }
 

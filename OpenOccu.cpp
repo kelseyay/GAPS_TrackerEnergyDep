@@ -1,4 +1,5 @@
-//To use: ./OccuOpen -i test -r HTofUmbOccu -m 0 -x 100 -o test
+//To use: ./OccuOpen -r HRecB_vs_CalcZ -m 1 -z 20 -x "Reconstructed Beta" -y "Calculated Z" -t "Calculated Z vs Beta"
+//Not just occupancy plots, this can take any 2D histogram and replot with a new min and max z-axis!
 
 //Fitting histlist.root output form Edep excutable
 using namespace std;
@@ -42,7 +43,14 @@ parser->AddCommandLineOption<string>("in_path", "path to instrument data files",
 parser->AddCommandLineOption<string>("out_path", "name of output root file", "", "o");
 parser->AddCommandLineOption<string>("root_title", "name of root histogram", "HTofUmbOccu", "r");
 parser->AddCommandLineOption<int>("zmin", "Minimum Z value 2D Histogram", 0, "m");
-parser->AddCommandLineOption<int>("zmax", "Maximum Z value 2D Histogram", 1000, "x");
+parser->AddCommandLineOption<int>("zmax", "Maximum Z value 2D Histogram", 1000, "z");
+
+parser->AddCommandLineOption<string>("x-title", "X axis title", "X Location Hit (mm)", "x");
+parser->AddCommandLineOption<string>("y-title", "Y axis title", "Y Location Hit (mm)", "y");
+parser->AddCommandLineOption<string>("savename", "Save Name", "test", "s");
+parser->AddCommandLineOption<string>("title", "Title of Plot", "Title", "t");
+
+
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
@@ -51,6 +59,11 @@ string out_path = parser->GetOption<string>("out_path");
 string root_name = parser->GetOption<string>("root_title");
 int Zmin = (parser->GetOption<int>("zmin"));
 int Zmax = (parser->GetOption<int>("zmax"));
+
+string Xtitle = (parser->GetOption<string>("x-title"));
+string Ytitle = (parser->GetOption<string>("y-title"));
+string savename = (parser->GetOption<string>("savename"));
+string title = (parser->GetOption<string>("title"));
 
 cout << Zmin << endl;
 cout << Zmax << endl;
@@ -71,7 +84,7 @@ TH2D *h = (TH2D*)f->Get(root_name.c_str());
 //TH2D *h = (TH2D*)f->Get(root_name.c_str());
 h->SetMinimum(Zmin);
 h->SetMaximum(Zmax);
-histplot2d("c1", h, root_name.c_str(),"X Location Hit (mm)","Y Location Hit (mm)","NEntries", out_path + "OccuTest");
+histplot2d("c1", h, title.c_str(),Xtitle,Ytitle, "NEntries", out_path + savename);
 //TFile *f = TFile::Open(FilenameRoot);
 //TH2D* h = new TH2D(root_name.c_str(), 168, -2000, 2000, 168, -2000, 2000, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", Zmin, Zmax));
 

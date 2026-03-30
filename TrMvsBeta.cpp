@@ -1,4 +1,6 @@
-//To use: ./TrmvB -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1 -o test -l 0.6 -u 1 -b 10
+//To use: ./TrmvB -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1 -o test2 -l 0.6 -u 1 -b 10
+//This is definitely not what it says on the tin anymore. This is all energy depositions in a certain beta bin
+
 
 using namespace std;
 
@@ -95,8 +97,8 @@ TreeRec->Add(FilenameRoot);
 int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
 double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
 
-double xlow = 0.3; //Low range for histogram MeV
-double xhigh = 20; //High range for histogram MeV
+double xlow = 0.1; //Low range for histogram MeV
+double xhigh = 2.5; //High range for histogram MeV
 
 double coshigh = 0.54; //0.995; //0.92 //0.54 is the highest angle that can hit UMB, CBEtop, CBEbot
 double coslow = 1; //0.62 //0.8

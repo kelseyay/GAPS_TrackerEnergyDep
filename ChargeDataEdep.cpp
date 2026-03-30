@@ -57,6 +57,9 @@ parser->AddCommandLineOption<double>("beta_high", "upper Beta Cut",1,"u");
 parser->AddCommandLineOption<double>("tkr_factor", "tkr factor",1,"k");
 parser->AddCommandLineOption<double>("tof_factor", "tof factor",1,"f");
 parser->AddCommandLineOption<int>("MainloopScale", "Main loop scale factor",1,"m");
+parser->AddCommandLineOption<int>("TRG", "Which trigger?",0,"r");
+parser->AddCommandLineOption<bool>("TKR", "tkr use",1,"s");
+parser->AddCommandLineOption<bool>("TF", "tof use",1,"t");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
@@ -98,6 +101,10 @@ TChain * TreeRec = new TChain("TreeRec"); //New TreeRec Tchain object (this is n
 TreeRec->SetBranchAddress("Rec", &Event); //Set the branch address using Event (defined above)
 TreeRec->Add(FilenameRoot);
 
+bool TKR = parser->GetOption<bool>("TKR");
+bool TF = parser->GetOption<bool>("TF");
+int TRG = parser->GetOption<int>("TRG");
+
 //int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
 double TofCutLow = 0; //No low Tof cut right now
 double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
@@ -117,8 +124,8 @@ double mpvmin = 0.66;
 double mpvmax = 0.75;
 
 //From fitted peaks from flight! Check over!
-double TofAngleCorrectedMip = 0.82*tf;
-double TrackerAngleCorrectedMip = 0.57*tk;
+double TofAngleCorrectedMip = 0.77/tf; //0.82/tf;
+double TrackerAngleCorrectedMip = 0.57/tk;
 
 int passctr = 0;
 int strkctr = 0;
@@ -138,11 +145,11 @@ ca::GPlottingTools Plotting;
 char text[400]; //This variable is used later to name the plots
 
 TH1D * HTruncatedMeanEnergyDepositionMip = Plotting.DefineTH1D("HTruncatedMeanEnergyDepositionMip",100, 0, 10, "sqrt(sqrt(truncated mean E))nergy deposition downgoing MIP [MIP]", "entries", 0.5, 1e4);
-TH1D * HChargeMip = Plotting.DefineTH1D("HChargeMip",200, 0, 4, "particle charge for downgoing MIP", "entries", 0.5, 1e4);
+TH1D * HChargeMip = Plotting.DefineTH1D("HChargeMip",200, 0.1, 4, "particle charge for downgoing MIP", "entries", 0.5, 1e4);
 
 //TH2D * HGenB_vs_GenZ = new TH2D("HGenB_vs_GenZ","Gen_Beta * Gen_Z vs Gen_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1 );
-TH2D * HRecB_vs_RecBTrunM = new TH2D("HRecB_vs_RecBTrunM","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1 );
-TH2D * HTrunM_vs_RecB= new TH2D("HTrunM_vs_RecB","Tr_Mean vs Rec_Beta",50, betacut - 0.1, betahigh + 0.1,50,  0.5 , 3.5);
+TH2D * HRecB_vs_RecBTrunM = new TH2D("HRecB_vs_RecBTrunM","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 4 );
+TH2D * HTrunM_vs_RecB= new TH2D("HTrunM_vs_RecB","Tr_Mean vs Rec_Beta",50, betacut - 0.1, betahigh + 0.1,50,  0.1 , 4);
 
 //TH1D * hedep;
 //hedep = new TH1D ("h0", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
@@ -181,7 +188,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
       	        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
 
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
-		if((pt != nullptr && pt->GetChi2()/pt->GetNdof()) < 3.2 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
+		if((pt != nullptr && pt->GetChi2()/pt->GetNdof()) < 3.2 && ( (TRG == 0) || ((int)Event->GetTriggerSources().at(0) == TRG) ) && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 		//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*MCEvent->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 		//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) < -coshigh && Event->GetPrimaryBetaGenerated()*Event->GetPrimaryMomentumDirectionGenerated()[2] < 0 && fabs(Event->GetPrimaryBetaGenerated()) >  betacut && fabs(Event->GetPrimaryBetaGenerated()) <  betahigh ){
 
@@ -198,8 +205,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                 //cout << "volspec(VolumeId,0,2) = " << volspec(VolumeId,0,2) << endl;
                 //cout << "volspec(VolumeId,3,1) " << volspec(VolumeId,2,1) << endl;
 
-                /*
-                if(GGeometryObject::IsTofVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TofCutLow){
+                if(TF && GGeometryObject::IsTofVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TofCutLow){
                     //A hit in the COR or CBE_sides needs to be multiplied by sin(theta) instead of cos(theta)
                     if(volspec(VolumeId,2,1) == 0 || volspec(VolumeId,2,1) == 1){
                         //cout << Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta())/TofAngleCorrectedMip << endl;
@@ -210,9 +216,10 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                         EnergyDepositionMip.push_back(Event->GetTrack(0)->GetEnergyDeposition(isig)*sqrt(1-pow(Event->GetPrimaryMomentumDirection().CosTheta(),2))/TofAngleCorrectedMip);
                         //cout << "VERTICAL PADDLE HIT" << endl;
                     }
-                }*/
+                }
 
-                if(GGeometryObject::IsTrackerVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TrackerCut){
+
+                if(TKR && GGeometryObject::IsTrackerVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TrackerCut){
                     //cout << Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta())/TrackerAngleCorrectedMip << endl;
                     EnergyDepositionMip.push_back(Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta())/TrackerAngleCorrectedMip);
                     //cout << "TRACKER HIT" << endl;
@@ -282,6 +289,10 @@ myfile.close();
 histplot1d("c1", HChargeMip, "MIP Charge Distribution","Charge","NEvents", out_path + "Both");
 histplot2d("c3", HRecB_vs_RecBTrunM, "Rec_B * sqrt(Tr_Mean) versus Rec_B","Reconstructed Beta","sqrt(truncated mean E) * Reconstructed B","NEntries", out_path + "BothRrec2D");
 histplot2d("c6", HTrunM_vs_RecB, "sqrt(Tr_Mean) versus Rec_B","Reconstructed Beta","sqrt(truncated mean E)","NEntries", out_path + "BothRecBTrunM");
+
+cout << "TOF: " << TF << " TKR: " << TKR << endl;
+cout << "Max bin Center is  " << HChargeMip->GetBinCenter(HChargeMip->GetMaximumBin()) << " factor should be " << pow(1/HChargeMip->GetBinCenter(HChargeMip->GetMaximumBin()),2) << endl;
+
 
 cout << endl << "I am done" << endl;
 

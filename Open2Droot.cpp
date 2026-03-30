@@ -35,7 +35,7 @@ using namespace std;
 int main(int argc, char *argv[]){
 
 GOptionParser* parser = GOptionParser::GetInstance();
-parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
+parser->AddProgramDescription("Open a histogram root file");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "out.root", "o");
 parser->ParseCommandLine(argc, argv);

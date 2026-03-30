@@ -167,3 +167,24 @@ void histplot2d(string ctitle, TH2D* h1, string title, string xtitle, string yti
     sprintf(histname, "%s.png",savename.c_str());
     c1->SaveAs(histname);
 }
+
+void histplot2f(string ctitle, TH2F* h1, string title, string xtitle, string ytitle, string ztitle, string savename){
+    TCanvas * c1 = new TCanvas(ctitle.c_str(), ctitle.c_str(), 200, 10, 900, 900);
+    c1->SetLeftMargin(0.14);
+    c1->SetRightMargin(0.16);
+    c1->SetTopMargin(0.1);
+    c1->SetBottomMargin(0.1);
+
+    h1->SetTitle(title.c_str());
+    h1->SetBit(TH1::kNoStats);
+    h1->GetXaxis()->SetTitle(xtitle.c_str());
+    h1->GetYaxis()->SetTitle(ytitle.c_str());
+    h1->GetZaxis()->SetTitle(ztitle.c_str());
+
+    h1->Draw("COLZ");
+    gPad->SetLogz();
+
+    char histname[400];
+    sprintf(histname, "%s.png",savename.c_str());
+    c1->SaveAs(histname);
+}
