@@ -44,6 +44,7 @@ parser->AddCommandLineOption<string>("out_file", "name of output root file", "",
 parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.2,"l");
 parser->AddCommandLineOption<double>("beta_high", "upper Beta Cut",1,"u");
 parser->AddCommandLineOption<int>("bbins", "number of beta bins",4,"b");
+parser->AddCommandLineOption<int>("cbins", "number of cos(theta) bins",2,"t");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
@@ -52,6 +53,7 @@ string out_path = parser->GetOption<string>("out_file");
 double betacut = parser->GetOption<double>("beta_low");
 double betahigh = parser->GetOption<double>("beta_high");
 int bbins = parser->GetOption<int>("bbins");
+int cbins = parser->GetOption<int>("cbins");
 int pid = parser->GetOption<int>("PID");
 
 if(betacut <= 0 || betacut >=1){ betacut = 0.2; cout << "Error with low beta choice. Setting Beta low to 0.2" << endl; }
@@ -93,10 +95,8 @@ double TofCut = 0.1;
 double xlow = 0.1; //Low range for histogram MeV
 double xhigh = 2.5; //High range for histogram MeV
 
-double coshigh = 0; //0.995; //0.92 //0.54 is the highest angle that can hit UMB, CBEtop, CBEbot
-double coslow = 1; //0.62 //0.8
-
-int cbins = 2; //Let's just start with 2 cos bins for now to trial this out.
+double coshigh = 1; //0.995; //0.92 //0.54 is the highest angle that can hit UMB, CBEtop, CBEbot
+double coslow = 0; //0.62 //0.8
 double cwid = (coshigh-coslow)/cbins;
 
 double fitlow = 0.5;
@@ -114,11 +114,14 @@ myfile << TString::Format( "Filename : %s", reco_path.c_str() )  << endl;
 myfile << TString::Format( "Beta High : %f", betahigh) << endl;
 myfile << TString::Format( "Beta Low : %f", betacut) << endl;
 myfile << TString::Format( "Beta Bins : %d", bbins) << endl;
-myfile << "Beta = [" ;
+myfile << "Beta = [" ; //This bracket thing should be a function!! woo
 
 TH1F * htkr[bbins];
 TH1F * htof[bbins];
 TH1F * htof_cos[cbins];
+TH1F * htkr_cos[cbins];
+
+//record_bins( myfile, "Beta", bbins, betacut, bwid);
 
 for(int i = 0; i < bbins; i++){
     cout << "low " << betacut+bwid*i << endl;
@@ -136,8 +139,8 @@ myfile << "Cos(theta) = [" ;
 for(int i = 0; i < cbins; i++){
     myfile << coslow+cwid*(i+0.5);
     if(i != cbins - 1) myfile << ",";
-    //htkr_cos[i] = new TH1F (("htkr_cos"+to_string(i)).c_str(), ("MIP Edep l Cos " + to_string(coslow+cwid*i) + " - " + to_string(coslow+cwid*(i+1)) ).c_str(), NBins, xlow,xhigh);
     htof_cos[i] = new TH1F (("htof_cos"+to_string(i)).c_str(), ("MIP Edep l Cos " + to_string(coslow+cwid*i) + " - " + to_string(coslow+cwid*(i+1)) ).c_str(), NBins, xlow,xhigh);
+    htkr_cos[i] = new TH1F (("htkr_cos"+to_string(i)).c_str(), ("MIP Edep l Cos " + to_string(coslow+cwid*i) + " - " + to_string(coslow+cwid*(i+1)) ).c_str(), NBins, xlow,xhigh);
 }
 
 myfile << "]" << endl;
@@ -145,7 +148,8 @@ myfile << "]" << endl;
 //TH2F(name, title, nbinsx, xlow, xup, nbinsy, ylow, yup)
 auto h2dbetaTKR = new TH2F("h2dbetaTKR","Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,10);
 auto h2dbetaTOF = new TH2F("h2dbetaTOF","Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,10);
-
+auto h2dcosTOF = new TH2F("h2dcosTOF","Energy x Cos(theta) Distribution vs Cos(Theta)" ,cbins,coslow,coshigh,NBins, xlow,10);
+auto h2dcosTKR = new TH2F("h2dcosTKR","Energy x Cos(theta) Distribution vs Cos(Theta)" ,cbins,coslow,coshigh,NBins, xlow,10);
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
@@ -187,7 +191,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
       	        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
     //Still don't want to do anything with weirt nullptr tracks in the reconstruction
 
-	if(pt != nullptr && -fabs(MCEvent->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(MCEvent->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && MCEvent->GetPrimaryBeta()*MCEvent->GetPrimaryMomentumDirection()[2] < 0 && fabs(MCEvent->GetPrimaryBeta()) >  betacut && fabs(MCEvent->GetPrimaryBeta()) <  betahigh ){
+	if(pt != nullptr && -fabs(MCEvent->GetPrimaryMomentumDirection().CosTheta()) < -fabs(coslow) && -fabs(MCEvent->GetPrimaryMomentumDirection().CosTheta()) > -fabs(coshigh) && MCEvent->GetPrimaryBeta()*MCEvent->GetPrimaryMomentumDirection()[2] < 0 && fabs(MCEvent->GetPrimaryBeta()) >  betacut && fabs(MCEvent->GetPrimaryBeta()) <  betahigh ){
 	    //-----------EVENT LEVEL CUTS START
 
 	    vector<int> MCSpec;
@@ -268,6 +272,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                                 h2dbetaTOF->Fill( beta ,MCEdep[k]*fabs(costheta) );
                                 if(beta > 0.8 && beta < 1.0){
                                     htof_cos[cbin]->Fill( MCEdep[k]*fabs(costheta) );
+                                    h2dcosTOF->Fill( costheta, MCEdep[k]*fabs(costheta) );
                                 }
 
                                 if(print) cout << "Flat paddle hit!! " << VolumeId << endl;
@@ -276,6 +281,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                                 h2dbetaTOF->Fill( beta ,MCEdep[k]*sqrt(1-pow(costheta,2)) );
                                 if(beta > 0.8 && beta < 1.0){
                                     htof_cos[cbin]->Fill( MCEdep[k]*sqrt(1-pow(costheta,2)) );
+                                    h2dcosTOF->Fill( costheta, MCEdep[k]*sqrt(1-pow(costheta,2)) );
                                 }
                                 if(print) cout << "Vertical paddle hit!! " << endl;
                             }
@@ -284,6 +290,10 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                         if(GGeometryObject::IsTrackerVolume(VolumeId) && MCEdep[k] > TrackerCut){
                             htkr[bbin]->Fill( MCEdep[k]*fabs(costheta) );
                             h2dbetaTKR->Fill( beta ,MCEdep[k]*fabs(costheta) );
+                            if(beta > 0.8 && beta < 1.0){
+                                htkr_cos[cbin]->Fill( MCEdep[k]*fabs(costheta) );
+                                h2dcosTKR->Fill( costheta, MCEdep[k]*fabs(costheta) );
+                            }
                         }
 
                     }//Closed bracket for 0.4 MeV requirement
@@ -310,95 +320,25 @@ TGraph *pts = new TGraph(); //Points to plot along with the histogram.
 TGraph *errs = new TGraph(); //Points to plot along with the histogram.
 TGraph *pts_TOF = new TGraph(); //Points to plot along with the histogram.
 TGraph *errs_TOF = new TGraph(); //Points to plot along with the histogram.
+TGraph *cos_pts_TOF = new TGraph(); //Points to plot along with the histogram.
+TGraph *cos_errs_TOF = new TGraph(); //Points to plot along with the histogram.
+TGraph *cos_pts_TKR = new TGraph(); //Points to plot along with the histogram.
+TGraph *cos_errs_TKR = new TGraph(); //Points to plot along with the histogram.
+
 
 //Good
 //cout << "GetNBinsX histogram " <<  h2dbetaTKR->GetNbinsX() << " GetNBinsY histogram " << h2dbetaTKR->GetNbinsY() << endl;
 
-for(int i = 1; i <= bbins; i++){
-
-    cout << i << endl;
-    double maxEdep = 0; //Maximum value of each beta bin
-    double FWHMlow = 0; //Maximum value of each beta bin
-    double FWHMhi = 0; //Maximum value of each beta bin
-    int maxBin = 0;
-    int FWHMBinlow = 0;
-    int FWHMBinhi = 0;
-
-    double maxEdep_TOF = 0; //Maximum value of each beta bin
-    double FWHMlow_TOF = 0; //Maximum value of each beta bin
-    double FWHMhi_TOF = 0; //Maximum value of each beta bin
-
-    bool TKR_hi = 1;
-    bool TKR_lo = 1;
-    bool TOF_hi = 1;
-    bool TOF_lo = 1;
-
-    int maxBin_TOF = 0;
-    int FWHMBinlow_TOF = 0;
-    int FWHMBinhi_TOF = 0;
-
-    //I am doing way to many stupid things oh my god. Take another look at this.
-    //I really should have just kept the TKR and TOF things separate here. This was such a mistake.
-    //I should just make this a function, right? Starting from the for loop outside of this!
-    //STOPPING POINT HERE
-
-    for(int j = 0; j < NBins; j++){ //Iterate over all of the bins and find the maximum bin for TOF and TKR
-        double content_TKR = h2dbetaTKR->GetBinContent(i, j);
-        double content_TOF = h2dbetaTOF->GetBinContent(i, j);
-        if (content_TKR > maxEdep){maxEdep = content_TKR; maxBin = j;}
-        if (content_TOF > maxEdep_TOF){maxEdep_TOF = content_TOF; maxBin_TOF = j;}
-    }
-
-    for(int j = 0; j < maxBin; j++){ //Find low bin by starting at max bin of TKR and step down
-        double content_TKR = h2dbetaTKR->GetBinContent(i, maxBin-j);
-        if (content_TKR < maxEdep/2 && TKR_lo){ FWHMBinlow = maxBin-j; TKR_lo = 0;}
-    }
-
-    for(int j = 0; j < maxBin_TOF; j++){ //Find low bin by starting at max bin and step down
-        double content_TOF = h2dbetaTOF->GetBinContent(i, maxBin_TOF-j);
-        if (content_TOF < maxEdep_TOF/2 && TOF_lo){ FWHMBinlow_TOF = maxBin_TOF-j; TOF_lo = 0;}
-    }
-
-    for(int j = maxBin; j < NBins - maxBin; j++){ //Find high bin of TKR by starting at max bin of TKR and step down
-        double content_TKR = h2dbetaTKR->GetBinContent(i, j);
-        if (content_TKR < maxEdep/2 && TKR_hi){ FWHMBinhi = j; TKR_hi = 0;}
-    }
-
-    for(int j = maxBin_TOF; j < NBins - maxBin_TOF; j++){
-        double content_TOF = h2dbetaTOF->GetBinContent(i, j);
-        if (content_TOF < maxEdep_TOF/2 && TOF_hi){ FWHMBinhi_TOF = j; TOF_hi = 0;}
-    }
-
-    pts->SetPoint(i, h2dbetaTKR->GetXaxis()->GetBinCenter(i), h2dbetaTKR->GetYaxis()->GetBinCenter(maxBin));
-    errs->SetPoint(i, h2dbetaTKR->GetXaxis()->GetBinCenter(i), h2dbetaTKR->GetYaxis()->GetBinCenter(FWHMBinhi));
-    errs->SetPoint(i+bbins, h2dbetaTKR->GetXaxis()->GetBinCenter(i), h2dbetaTKR->GetYaxis()->GetBinCenter(FWHMBinlow));
-
-    pts_TOF->SetPoint(i, h2dbetaTOF->GetXaxis()->GetBinCenter(i), h2dbetaTOF->GetYaxis()->GetBinCenter(maxBin_TOF));
-    errs_TOF->SetPoint(i, h2dbetaTOF->GetXaxis()->GetBinCenter(i), h2dbetaTOF->GetYaxis()->GetBinCenter(FWHMBinhi_TOF));
-    errs_TOF->SetPoint(i+bbins, h2dbetaTOF->GetXaxis()->GetBinCenter(i), h2dbetaTOF->GetYaxis()->GetBinCenter(FWHMBinlow_TOF));
-
-}
-    //pts->SetPoint(0, h2dbetaTKR->GetXaxis()->GetBinCenter(beta_bin), 4); // Set the point at (x_coord, y_coord)
-
-// Set pts appearance (do a different set for the FWHMs)
-pts->SetMarkerStyle(20); // Solid circle
-pts->SetMarkerColor(kBlack);
-pts->SetMarkerSize(1.5);
-
-errs->SetMarkerStyle(3); // Stars
-errs->SetMarkerColor(kBlack);
-errs->SetMarkerSize(1.5);
-
-pts_TOF->SetMarkerStyle(20); // Solid circle
-pts_TOF->SetMarkerColor(kBlack);
-pts_TOF->SetMarkerSize(1.5);
-
-errs_TOF->SetMarkerStyle(3); // Stars
-errs_TOF->SetMarkerColor(kBlack);
-errs_TOF->SetMarkerSize(1.5);
+label_2Dhisto(h2dbetaTKR, pts, errs);
+label_2Dhisto(h2dbetaTOF, pts_TOF, errs_TOF);
+label_2Dhisto(h2dcosTOF, cos_pts_TOF, cos_errs_TOF);
+label_2Dhisto(h2dcosTKR, cos_pts_TKR, cos_errs_TKR);
 
 histplot2f_pts_errs("c1", h2dbetaTKR,pts,errs, "MC True: TKR Energy x Cos(theta) Distribution vs Beta", "Beta" , "Energy x Cos(theta)", "NEntries", out_path + "Tracker2D_vs_Beta" );
-histplot2f_pts_errs("c0", h2dbetaTOF,pts_TOF,errs_TOF,"MC True: TOF Energy x Cos(theta) Distribution vs Beta", "Beta" , "Energy x Cos(theta)", "NEntries", out_path + "TOF2D_vs_Beta" );
+histplot2f_pts_errs("c0", h2dbetaTOF,pts_TOF,errs_TOF,"MC True: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Energy x Cos(theta)", "NEntries", out_path + "TOF2D_vs_Beta" );
+histplot2f_pts_errs("c2", h2dcosTOF,cos_pts_TOF,cos_errs_TOF,"MC True: MIP TOF Energy x Sin/Cos(theta) Distribution vs Cos(Theta)", "Cos(Theta)" , "Angle Corrected Energy", "NEntries", out_path + "TOF2D_vs_Cos" );
+histplot2f_pts_errs("c3", h2dcosTKR,cos_pts_TKR,cos_errs_TKR,"MC True: MIP TKR Energy x Sin/Cos(theta) Distribution vs Cos(Theta)", "Cos(Theta)" , "Energy x Cos(Theta)", "NEntries", out_path + "TKR2D_vs_Cos" );
+
 
 myfile << "EdepTKR = [" ;
 
