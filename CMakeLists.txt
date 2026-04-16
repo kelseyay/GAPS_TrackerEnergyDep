@@ -31,9 +31,9 @@ set(LIB_DIRS ${ROOT_LIBRARIES}
                             Boost::log
                             Boost::log_setup)
 
-add_executable(example minimum_example.cpp)
-target_include_directories(example PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
-target_link_libraries(example ${LIB_DIRS})
+add_executable(exam minimum_example.cpp)
+target_include_directories(exam PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(exam ${LIB_DIRS})
 
 add_executable(Occupancy Occupancy.cpp)
 target_include_directories(Occupancy PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
@@ -91,6 +91,10 @@ add_executable(Zedep2 ChargeMCEdep2.cpp)
 target_include_directories(Zedep2 PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(Zedep2 ${LIB_DIRS})
 
+add_executable(Zedep3 ChargeMCEdep3.cpp)
+target_include_directories(Zedep3 PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(Zedep3 ${LIB_DIRS})
+
 add_executable(DZedep ChargeDataEdep.cpp)
 target_include_directories(DZedep PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(DZedep ${LIB_DIRS})
@@ -98,6 +102,10 @@ target_link_libraries(DZedep ${LIB_DIRS})
 add_executable(DZedep2 ChargeDataEdep2.cpp)
 target_include_directories(DZedep2 PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(DZedep2 ${LIB_DIRS})
+
+add_executable(DZedep3 ChargeDataEdep3.cpp)
+target_include_directories(DZedep3 PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(DZedep3 ${LIB_DIRS})
 
 add_executable(Ledep MCEdepLayers.cpp)
 target_include_directories(Ledep PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
@@ -118,6 +126,10 @@ target_link_libraries(OccuOpen ${LIB_DIRS})
 add_executable(TrmvB TrMvsBeta.cpp)
 target_include_directories(TrmvB PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(TrmvB ${LIB_DIRS})
+
+add_executable(MCTrmvB MCTrMvsBeta.cpp)
+target_include_directories(MCTrmvB PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(MCTrmvB ${LIB_DIRS})
 
 add_executable(SimpleHisto SimpleHisto.cpp)
 target_include_directories(SimpleHisto PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
