@@ -82,7 +82,7 @@ double xhigh = 4; //High range for histogram MeV
 
 double coshigh = 0.54; //0.995; //0.92 //0.54 is the highest angle that can hit UMB, CBEtop, CBEbot
 double coslow = 1; //0.62 //0.8
-double fitlow = 0.5;
+double fitlow = 0.4;
 double fithigh = 4;
 const Int_t NBins = 50;
 double betacut = 0.8; //Currently we're only doing a beta > 0 cutoff for real data. Beta > 0.8 recommended for sim
@@ -108,14 +108,19 @@ for(int s = 0; s < nstrips; s++){strps[s] = s;}
 //The Chosen One TM
 const int chl = 0;
 const int chr = 0;
-const int chm = 2;
+const int chm = 0;
 const int chd = 2;
 const int chslow = 24;
 const int chshi = 31;
+int numParameter = 4;
 
 //Just need one histogram and one fit for one strip
 TH1F * hdet = new TH1F (TString::Format("h0_l%ir%im%id%i",chl,chr,chm,chd), ("Edep l" + to_string(chl) + "r" + to_string(chr) + "m" + to_string(chm) + "d" + to_string(chd)).c_str(), NBins, xlow,xhigh);
-TF1 * gdet = new TF1("g1", "landau", fitlow, fithigh);
+TF1 * gdet = new TF1("f_landau_gauss",langaufun,fitlow,fithigh,numParameter);
+gdet->SetParameter(0, 0.1);
+gdet->SetParameter(1, 0);
+gdet->SetParameter(2, 1000);
+gdet->SetParameter(3, 1);
 
 //Prepare reconstronstructed event
 CEventRec* Event = new CEventRec(); //New reconstructed event
