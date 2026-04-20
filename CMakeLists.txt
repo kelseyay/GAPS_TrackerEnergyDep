@@ -79,6 +79,10 @@ add_executable(OneHist TrackerOneHist.cpp)
 target_include_directories(OneHist PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(OneHist ${LIB_DIRS})
 
+add_executable(MCOneDet MCOneDetHist.cpp)
+target_include_directories(MCOneDet PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(MCOneDet ${LIB_DIRS})
+
 add_executable(OneDet OneDetHist.cpp)
 target_include_directories(OneDet PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(OneDet ${LIB_DIRS})
@@ -127,9 +131,17 @@ add_executable(TrmvB TrMvsBeta.cpp)
 target_include_directories(TrmvB PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(TrmvB ${LIB_DIRS})
 
-add_executable(MCTrmvB MCTrMvsBeta.cpp)
-target_include_directories(MCTrmvB PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
-target_link_libraries(MCTrmvB ${LIB_DIRS})
+add_executable(MCEdepvB MCEdepvsBeta.cpp)
+target_include_directories(MCEdepvB PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(MCEdepvB ${LIB_DIRS})
+
+add_executable(MCZvB MCZvsBeta.cpp)
+target_include_directories(MCZvB PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(MCZvB ${LIB_DIRS})
+
+add_executable(RecEdepvB RecEdepvsBeta.cpp)
+target_include_directories(RecEdepvB PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(RecEdepvB ${LIB_DIRS})
 
 add_executable(SimpleHisto SimpleHisto.cpp)
 target_include_directories(SimpleHisto PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)

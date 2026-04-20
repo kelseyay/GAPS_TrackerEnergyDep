@@ -1,4 +1,4 @@
-//To run, do ./OneDet -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1_FTFP_BERT_17
+//To run, do ./MCOneDet -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1_FTFP_BERT_17
 //HEY I'M MESSING AROUND HERE DON'T USE THIS CARELESSLY!
 //I HAVE ADDED A FACTOR TO MC VERSION OF THIS CODE!
 
@@ -85,7 +85,7 @@ double coslow = 1; //0.62 //0.8
 double fitlow = 0.5;
 double fithigh = 4;
 const Int_t NBins = 50;
-double betacut = 0.2; //Currently we're only doing a beta > 0 cutoff for real data. Beta > 0.8 recommended for sim
+double betacut = 0.8; //Currently we're only doing a beta > 0 cutoff for real data. Beta > 0.8 recommended for sim
 
 //Number of layers and strips
 const int nstrips = 32;
@@ -106,9 +106,9 @@ for(int s = 0; s < nstrips; s++){strps[s] = s;}
 
 
 //The Chosen One TM
-const int chl = 2;
-const int chr = 5;
-const int chm = 1;
+const int chl = 0;
+const int chr = 0;
+const int chm = 2;
 const int chd = 2;
 const int chslow = 24;
 const int chshi = 31;
@@ -125,7 +125,7 @@ TreeRec->Add(FilenameRoot);
 
 //Prepare textile for The Chosen One
 std::ofstream chosenfile;
-chosenfile.open("TheChosenDetMCM.txt");
+chosenfile.open("TheChosenDet.txt");
 chosenfile << TString::Format( "The Chosen Det : l%ir%im%id%i ", chl,chr,chm,chd )  << endl;
 chosenfile << TString::Format( "Filename : %s", FilenameRoot )  << endl;
 chosenfile << TString::Format( "Beta Cut : %f", betacut) << endl;
@@ -158,7 +158,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
    	        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
 
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
-		if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut){
+		if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) < -coshigh && Event->GetPrimaryBetaGenerated()*Event->GetPrimaryMomentumDirectionGenerated()[2] < 0 && fabs(Event->GetPrimaryBetaGenerated()) >  betacut){
 			//cout << "Event is " << i << endl;
 
 			//-----------EVENT LEVEL CUT APPLIED
@@ -193,12 +193,11 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 						//hnentries->Fill(row*32+strip,layer*6+mod);
 
 						if(layer == chl && row == chr && mod == chm && strip >= chslow && strip <= chshi){
-						    //cout << "Event is " << i << "Chosen Det hit!" << endl;
 
-							hdet->Fill(Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()));
+							hdet->Fill((0.23/0.25)*Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()));
 
-							chosenfile.open("TheChosenDetMCM.txt",std::ios::app);
-							chosenfile << TString::Format( "%i \t %i%i%i%i \t %f \t %f \t %f",i,layer,row,mod,strip,Event->GetTrack(0)->GetEnergyDeposition(isig),fabs(Event->GetPrimaryMomentumDirection().CosTheta()), (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))   ) << endl;
+							chosenfile.open("TheChosenDet.txt",std::ios::app);
+						chosenfile << TString::Format( "%i \t %i%i%i%i \t %f \t %f \t %f",i,layer,row,mod,strip,Event->GetTrack(0)->GetEnergyDeposition(isig),fabs(Event->GetPrimaryMomentumDirection().CosTheta()), (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))   ) << endl;
 							chosenfile.close();
 						}
 
@@ -232,8 +231,8 @@ LegEdepCompare->SetFillColor(0);
 
 hdet->SetLineColor(1);
 hdet->GetXaxis()->SetTitle("Energy Deposition of Hit (MeV)");
-hdet->SaveAs("hMCMdetprefit");
-hdet->SaveAs("hMCMdetprefit.root");
+hdet->SaveAs("h300detprefit");
+hdet->SaveAs("h300detprefit.root");
 
 hdet->GetYaxis()->SetTitle("Number of Events");
 hdet->Fit(gdet,"R");
@@ -243,12 +242,12 @@ gPad->SetLogy(1);
 gStyle->SetTitleW(0.9);
 gStyle->SetOptFit();
 hdet->Draw();
-hdet->SaveAs("hMCMdet");
-gdet->SaveAs("gMCMdet");
-hdet->SaveAs("hMCMdet.root");
-gdet->SaveAs("gMCMdet.root");
+hdet->SaveAs("h300det");
+gdet->SaveAs("g300det");
+hdet->SaveAs("h300det.root");
+gdet->SaveAs("g300det.root");
 
-string title = "MCM_l" + to_string(chl) + "r" + to_string(chr) + "m" + to_string(chm) + "d" + to_string(chd);
+string title = "l" + to_string(chl) + "r" + to_string(chr) + "m" + to_string(chm) + "d" + to_string(chd);
 char name[400];
 sprintf(name, "%s.root",title.c_str());
 EdepCompare->SaveAs(name);
