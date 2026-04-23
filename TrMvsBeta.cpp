@@ -95,7 +95,8 @@ TreeRec->SetBranchAddress("Rec", &Event); //Set the branch address using Event (
 TreeRec->Add(FilenameRoot);
 
 int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
-double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
+double TofCut = 0.1; //Threshold for an energy deposition to be considered a hit
+double TrackerCut = 0.4; //Threshold for an energy deposition to be considered a hit
 
 double xlow = 0.1; //Low range for histogram MeV
 double xhigh = 2.5; //High range for histogram MeV
@@ -193,7 +194,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 					//cout << "beta " << beta << " bbin " << bbin << endl;
 
-					if(GGeometryObject::IsTofVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig)){
+					if(GGeometryObject::IsTofVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TofCut){
                     //A hit in the COR or CBE_sides needs to be multiplied by sin(theta) instead of cos(theta)
                         //cout << "VolumeId " << VolumeId << endl;
                         if(volspec(VolumeId,2,1) == 0 || volspec(VolumeId,2,1) == 1){

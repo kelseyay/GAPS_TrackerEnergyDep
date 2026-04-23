@@ -5,9 +5,20 @@
 #include "TH1.h"
 #include "TFile.h"
 
+#include <boost/math/special_functions/lambert_w.hpp>
+#include <iostream>
+
 using std::string;
+using namespace std;
 
 int main(int argc, char *argv[]){
+
+    cout << " Hello World " << endl;
+    double z = 1;
+    double result = boost::math::lambert_w0(z);
+    std::cout << "W0(1.0) = " << result << std::endl;
+
+    /*
     GOptionParser* parser = GOptionParser::GetInstance();
     parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
     parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
@@ -42,6 +53,7 @@ int main(int argc, char *argv[]){
     out_file.cd();
     hits_by_layer->Write();
     out_file.Close();
+    */
 
     return 1;
 }

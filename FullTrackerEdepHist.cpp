@@ -1,3 +1,7 @@
+//../EdepHist -i /home/kelsey/simulations/simdat/ground/251204/25.10/ethernet251204_
+//../EdepHist -i /home/kelsey/simulations/simdat/flight/251226/26.01/starlink251226_1 -r 2
+//Look this could use some improvement, but right now just navigate to the directory you like everything in o-o;;
+
 using namespace std;
 
 #include <TColor.h>
@@ -96,6 +100,7 @@ GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "out.root", "o");
+parser->AddCommandLineOption<int>("TRG", "Which trigger?",0,"r");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
@@ -115,6 +120,8 @@ TChain * TreeRec = new TChain("TreeRec"); //New TreeRec Tchain object (this is n
 TreeRec->SetBranchAddress("Rec", &Event); //Set the branch address using Event (defined above)
 TreeRec->Add(FilenameRoot);
 
+int TRG = parser->GetOption<int>("TRG");
+
 int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
 double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
 
@@ -125,8 +132,8 @@ double coslow = 1; //0.62 //0.8
 double fitlow = 0.5;
 double fithigh = 3.5;
 const Int_t NBins = 50;
-double betahigh = 0.75;
-double betacut = 0.5; //Currently we're only doing a beta > 0 cutoff for real data. Beta > 0.8 recommended for sim
+double betahigh = 1;
+double betacut = 0.8; //Currently we're only doing a beta > 0 cutoff for real data. Beta > 0.8 recommended for sim
 
 //Full tracker histogram range
 double mpvmin = 0.66;
@@ -200,7 +207,8 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 	//Cuts are implemented in this chunk:
 	if(Event->GetNTracks() == 1){  //First select the single track event
-		bool Umbflag = 0;
+		bool UMBflag = 0;
+		bool OUTflag = 0;
 		bool CBEtopflag = 0;
 		bool CBEbotflag = 0;
 
@@ -213,19 +221,20 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
       	        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
 
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
-		if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
+		if(pt != nullptr &&  ( (TRG == 0) || ((int)Event->GetTriggerSources().at(0) == TRG) ) && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 			//cout << "Event is " << i << endl;
 
 			//-----------EVENT LEVEL CUT APPLIED
 
 			for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
                 unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig); //Check the VolumeId of the event
-                if(volspec(VolumeId,0,3) == 100){ Umbflag = 1;} // cout << "UMB hit!" <<endl ;
+                if(volspec(VolumeId,0,3) == 100){ UMBflag = 1;} // cout << "UMB hit!" <<endl ;
                 if(volspec(VolumeId,0,3) == 110) {CBEtopflag = 1;}// cout << "CBE top hit!" << endl;
                 if(volspec(VolumeId,0,3) == 111) {CBEbotflag = 1;}// cout << "CBE bot hit!" << endl;
+                if(volspec(VolumeId,0,2) == 10) {OUTflag = 1;}// cout << "CBE bot hit!" << endl;
             }
 
-			if(Umbflag && CBEtopflag /*&& CBEbotflag*/ && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
+			if( OUTflag /*&& CBEtopflag && CBEbotflag*/ && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
 				//cout << "Event number " << i << " passes the cuts!" << endl;
 				for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
 					unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig);
@@ -242,7 +251,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 						int strip = getch(layer, det, sdstrip);
 
 						//cout << "lrms" << layer << row << mod << strip << endl;
-						//cout << "Edep * Cos(theta) " << Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta() << endl;
+						//cout << "Edep * Cos(theta) " << Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()) << endl;
 						if(layer < nlayers){ //This line prevents a segfault in the case of wanting to do fewer layers than the whole tracker
 							h[layer][row][mod][strip]->Fill(  (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))   );
 							hnentries->Fill(row*32+strip,layer*6+mod);

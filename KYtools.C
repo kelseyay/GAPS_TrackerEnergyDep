@@ -188,3 +188,95 @@ void histplot2f(string ctitle, TH2F* h1, string title, string xtitle, string yti
     sprintf(histname, "%s.png",savename.c_str());
     c1->SaveAs(histname);
 }
+
+void histplot2f_pts(string ctitle, TH2F* h1, TGraph * pts, string title, string xtitle, string ytitle, string ztitle, string savename){
+    TCanvas * c1 = new TCanvas(ctitle.c_str(), ctitle.c_str(), 200, 10, 900, 900);
+    c1->SetLeftMargin(0.14);
+    c1->SetRightMargin(0.16);
+    c1->SetTopMargin(0.1);
+    c1->SetBottomMargin(0.1);
+
+    h1->SetTitle(title.c_str());
+    h1->SetBit(TH1::kNoStats);
+    h1->GetXaxis()->SetTitle(xtitle.c_str());
+    h1->GetYaxis()->SetTitle(ytitle.c_str());
+    h1->GetZaxis()->SetTitle(ztitle.c_str());
+
+    h1->Draw("COLZ");
+    pts->Draw("P same");
+    gPad->SetLogz();
+
+    char histname[400];
+    sprintf(histname, "%s.png",savename.c_str());
+    c1->SaveAs(histname);
+}
+
+
+void histplot2f_pts_errs(string ctitle, TH2F* h1, TGraph * pts, TGraph * errs, string title, string xtitle, string ytitle, string ztitle, string savename){
+    TCanvas * c1 = new TCanvas(ctitle.c_str(), ctitle.c_str(), 200, 10, 900, 900);
+    c1->SetLeftMargin(0.14);
+    c1->SetRightMargin(0.16);
+    c1->SetTopMargin(0.1);
+    c1->SetBottomMargin(0.1);
+
+    h1->SetTitle(title.c_str());
+    h1->SetBit(TH1::kNoStats);
+    h1->GetXaxis()->SetTitle(xtitle.c_str());
+    h1->GetYaxis()->SetTitle(ytitle.c_str());
+    h1->GetZaxis()->SetTitle(ztitle.c_str());
+
+    h1->Draw("COLZ");
+    pts->Draw("P same");
+    errs->Draw("P same");
+    gPad->SetLogz();
+
+    char histname[400];
+    sprintf(histname, "%s.png",savename.c_str());
+    c1->SaveAs(histname);
+}
+
+//Function that takes a 2D histogram, pts, and errors. Finds the max histogram bin in each column and puts it in pts
+//Finds the FWHM and puts it in errs
+//Let's see if this idea even works.
+
+void label_2Dhisto(TH2F * h2, TGraph *pts, TGraph *errs) {
+    int cols = h2->GetNbinsX();
+    int rows = h2->GetNbinsY();
+
+    for(int i = 1; i <= cols; i++){
+         double maxVal = 0; //For each column, there will be a maximum value
+         int FWHMlow = 0; //FWHM low bin
+         int FWHMhi = 0; //FWHM high bin
+         int maxBin = 0;
+
+        for(int j = 0; j < rows; j++){ //Iterate over all of the bins and find the maximum bin for TOF and TKR
+             double content = h2->GetBinContent(i, j);
+             if (content > maxVal && j != 0){maxVal = content; maxBin = j;}
+        }
+        //cout << "Maxval " << maxVal << " at max bin " << maxBin << endl;
+
+        for(int j = 0; j < maxBin; j++){ //Find low bin by starting at max bin of TKR and step down
+            double content = h2->GetBinContent(i, maxBin-j);
+            if (content < maxVal/2){ FWHMlow = maxBin-j; break;}
+        }
+
+        for(int j = maxBin; j < rows - maxBin; j++){ //Find high bin by starting at max bin of TKR and step down
+            double content = h2->GetBinContent(i, j);
+            if (content < maxVal/2){ FWHMhi = j; break;}
+        }
+
+        pts->SetPoint(i, h2->GetXaxis()->GetBinCenter(i), h2->GetYaxis()->GetBinCenter(maxBin));
+        errs->SetPoint(i, h2->GetXaxis()->GetBinCenter(i), h2->GetYaxis()->GetBinCenter(FWHMhi));
+        errs->SetPoint(i+rows, h2->GetXaxis()->GetBinCenter(i), h2->GetYaxis()->GetBinCenter(FWHMlow));
+
+    }
+
+    // Set pts appearance (do a different set for the FWHMs)
+    pts->SetMarkerStyle(20); // Solid circle
+    pts->SetMarkerColor(kBlack);
+    pts->SetMarkerSize(1.5);
+
+    errs->SetMarkerStyle(3); // Stars
+    errs->SetMarkerColor(kBlack);
+    errs->SetMarkerSize(1.5);
+}

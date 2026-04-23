@@ -114,6 +114,7 @@ for(unsigned int i = 0; i < 2; i+=MainLoopScaleFactor){
     cout << endl << "Event is " << i << endl;
     cout << "Event ID? " << Event->GetEventId() << endl;
     cout << "Event Number? " << Event->GetEventNumber() << endl; //Gviz2D is for sure pulling Event number!
+    cout << "Reconstruction used: " << Event->GetActiveReconstruction() << endl;
 	//if( TreeMC->GetEntries() % (i+1) == 0){cout << "Time at Event " << i << " = " << Event->GetEventTime() << endl;}
 
 	//CTrackMc* pt = Event->GetPrimaryTrack();

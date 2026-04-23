@@ -143,6 +143,14 @@ add_executable(RecEdepvB RecEdepvsBeta.cpp)
 target_include_directories(RecEdepvB PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(RecEdepvB ${LIB_DIRS})
 
+add_executable(PartsRecEdepvB PartsRecEdepvsBeta.cpp)
+target_include_directories(PartsRecEdepvB PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(PartsRecEdepvB ${LIB_DIRS})
+
+add_executable(MCPartsEdepvB MCPartsEdepvsBeta.cpp)
+target_include_directories(MCPartsEdepvB PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(MCPartsEdepvB ${LIB_DIRS})
+
 add_executable(SimpleHisto SimpleHisto.cpp)
 target_include_directories(SimpleHisto PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(SimpleHisto ${LIB_DIRS})

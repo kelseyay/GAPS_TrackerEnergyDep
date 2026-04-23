@@ -326,6 +326,8 @@ HRecB_vs_CalcZ->SaveAs( (out_path + "HRecB_vs_CalcZ.root").c_str() );
 histplot1d("c1", HChargeMip, ("Charge Distribution Rec Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Charge","NEvents", out_path + "Both");
 histplot2d("c2", HRecB_vs_CalcZ, "Z_calc versus Rec_B","Reconstructed Beta","Z_calc","NEntries", out_path + "BothRrec2D");
 
+
+//LMAO Right I did this perverse thing to my code to try to map my results onto Philip's and didn't comment on it. Okay, just focus on the HChargeMIP!
 histplot1d("c3", HTofMult, ("Tof Mult Factor " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Factor","NEvents", out_path + "TofFactor");
 cout << "HTofMult Mean " << HTofMult->GetMean() << endl;
 histplot1d("c4", HTkrMult, ("Tkr Mult Factor " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Factor","NEvents", out_path + "TkrFactor");

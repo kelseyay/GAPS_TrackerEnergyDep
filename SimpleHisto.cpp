@@ -99,7 +99,8 @@ char text[400]; //This variable is used later to name the plots
 
 //What histogram would you like to plot here!!
 //Reconstructed beta vs generated beta for MC!
-TH2D * HRecB_vs_GenB= new TH2D("HRecB_vs_GenB","Rec_B vs Gen_Beta",50, 0, 1,50, 0.1,1.5);
+TH1D * HGenB = Plotting.DefineTH1D("HGenB",20, betacut, 1, "Generated Beta", "entries", 2000, 3000);
+TH2D * HRecB_vs_GenB= new TH2D("HRecB_vs_GenB","Rec_B vs Gen_Beta",50, betacut, 1,50, 0.1,1.5);
 
 //How many entries:
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
@@ -126,10 +127,11 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
       	        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
 
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
-		if(pt != nullptr){
+		if(pt != nullptr && fabs(Event->GetPrimaryBetaGenerated()) >  betacut && fabs(Event->GetPrimaryBetaGenerated()) < betahigh){
 		//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 			//cout << "Event is " << i << endl;
 
+			HGenB->Fill(Event->GetPrimaryBetaGenerated());
 			HRecB_vs_GenB->Fill(Event->GetPrimaryBetaGenerated(),Event->GetPrimaryBeta());
 
 		} //Closed bracket for event level cut
@@ -140,9 +142,12 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 
 
+//HGenB->Scale(1.0 / HGenB->Integral(), "width");
+
 //Histogram section
 //-------------------------------------
-histplot2d("c7",HRecB_vs_GenB,"Rec_B versus Gen_B","Generated Beta", "Reconstructed Beta","NEntries", out_path + "BothgenBRecB" );
+histplot2d("c1",HRecB_vs_GenB,"Rec_B versus Gen_B","Generated Beta", "Reconstructed Beta","NEntries", out_path + "BothgenBRecB" );
+histplot1d("c2",HGenB,"Gen_B","Generated Beta","NEntries", out_path + "GenB" );
 
 cout << endl << "I am done" << endl;
 

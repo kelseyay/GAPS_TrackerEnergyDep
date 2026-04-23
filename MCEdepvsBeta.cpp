@@ -1,4 +1,4 @@
-//To use: ./MCTrmvB -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1_FTFP_BERT_1757850432_rec -o test2 -l 0.6 -u 1 -b 20 -p 13
+//To use: ./MCEdepvB -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1_FTFP_BERT_1757850432_rec -o test2 -l 0.6 -u 1 -b 20 -w 1
 
 using namespace std;
 
@@ -38,13 +38,13 @@ int main(int argc, char *argv[]){
 
 GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("MC truth energy depositions in beta bins");
-parser->AddCommandLineOption<int>("PID", "Primary PID",13,"p"); //Default to muon
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
 parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.2,"l");
 parser->AddCommandLineOption<double>("beta_high", "upper Beta Cut",1,"u");
 parser->AddCommandLineOption<int>("bbins", "number of beta bins",4,"b");
 parser->AddCommandLineOption<int>("cbins", "number of cos(theta) bins",2,"t");
+parser->AddCommandLineOption<bool>("MC_Weighting", "Monte Carlo Weighting on or off?",0,"w");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
@@ -54,8 +54,8 @@ double betacut = parser->GetOption<double>("beta_low");
 double betahigh = parser->GetOption<double>("beta_high");
 int bbins = parser->GetOption<int>("bbins");
 int cbins = parser->GetOption<int>("cbins");
-int pid = parser->GetOption<int>("PID");
-
+bool MC_Weight = parser->GetOption<bool>("MC_Weighting");
+cout << "MC_weight " << MC_Weight << endl;
 if(betacut <= 0 || betacut >=1){ betacut = 0.2; cout << "Error with low beta choice. Setting Beta low to 0.2" << endl; }
 cout << "beta cut = " << betacut << endl;
 
@@ -87,13 +87,19 @@ TChain * TreeMC = new TChain("TreeMc"); //New TreeMC Tchain object (this is new 
 TreeMC->SetBranchAddress("Mc", &MCEvent); //Set the branch address using Event (defined above)
 TreeMC->Add(FilenameRoot);
 
+TChain*TreeSimulationParameter = new TChain("SimulationParameterTree");
+TreeSimulationParameter->Add(FilenameRoot);
+GSimulationParameter * Parameter = new GSimulationParameter;
+TreeSimulationParameter->SetBranchAddress("SimulationParameter", &Parameter);
+TreeSimulationParameter->GetEntry(0);
+
 
 int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
-double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
+double TrackerCut = 0.4; //Threshold for an energy deposition to be considered a hit
 double TofCut = 0.1;
 
 double xlow = 0.1; //Low range for histogram MeV
-double xhigh = 2.5; //High range for histogram MeV
+double xhigh = 10; //High range for histogram MeV
 
 double coshigh = 1; //0.995; //0.92 //0.54 is the highest angle that can hit UMB, CBEtop, CBEbot
 double coslow = 0; //0.62 //0.8
@@ -118,6 +124,7 @@ myfile << "Beta = [" ; //This bracket thing should be a function!! woo
 
 TH1F * htkr[bbins];
 TH1F * htof[bbins];
+TH1F * htof_weight[bbins];
 TH1F * htof_cos[cbins];
 TH1F * htkr_cos[cbins];
 
@@ -148,8 +155,12 @@ myfile << "]" << endl;
 //TH2F(name, title, nbinsx, xlow, xup, nbinsy, ylow, yup)
 auto h2dbetaTKR = new TH2F("h2dbetaTKR","Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,10);
 auto h2dbetaTOF = new TH2F("h2dbetaTOF","Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,10);
+auto h2dbetaTOF_Weight = new TH2F("h2dbetaTOF_Weight","Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,10);
+auto h2dbetaTKR_Weight = new TH2F("h2dbetaTOF_Weight","Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,10);
 auto h2dcosTOF = new TH2F("h2dcosTOF","Energy x Cos(theta) Distribution vs Cos(Theta)" ,cbins,coslow,coshigh,NBins, xlow,10);
 auto h2dcosTKR = new TH2F("h2dcosTKR","Energy x Cos(theta) Distribution vs Cos(Theta)" ,cbins,coslow,coshigh,NBins, xlow,10);
+auto h2dcosTOF_Weight = new TH2F("h2dcosTOF_Weight","Energy x Cos(theta) Distribution vs Cos(Theta)" ,cbins,coslow,coshigh,NBins, xlow,10);
+auto h2dcosTKR_Weight = new TH2F("h2dcos_TKR_Weight","Energy x Cos(theta) Distribution vs Cos(Theta)" ,cbins,coslow,coshigh,NBins, xlow,10);
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
@@ -171,6 +182,38 @@ TreeRec->GetEntry(0);
 TreeMC->GetEntry(0);
 
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
+
+//MC Weighting things below:
+
+double FluxScaleFactor = 71.1552/32.058750*0.25;
+
+int BetaBins = 25;
+double StartingPlaneAcceptance = 1;
+TH1D* HPrimaryBeta = nullptr;
+double BinWidthFactor = 1;
+std::vector<double> PrimaryBetaLowHigh;
+
+vector<pair<double, double> > CosZenithCut;
+CosZenithCut.push_back(make_pair(-0.75, -1));
+CosZenithCut.push_back(make_pair(-0.5, -0.75));
+CosZenithCut.push_back(make_pair(-0.25, -0.5));
+CosZenithCut.push_back(make_pair(0, -0.25));
+
+vector<TGraph*> GMuonTotalFluxUnscaled;
+GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.875"), 0.1057));
+GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.625"), 0.1057));
+GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.375"), 0.1057));
+GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.125"), 0.1057));
+
+CAnalysisManager AnalysisManagerRec;
+AnalysisManagerRec.SetGSimulationParameterTChain(TreeSimulationParameter);
+StartingPlaneAcceptance = AnalysisManagerRec.GetStartingPlaneAcceptance();
+PrimaryBetaLowHigh = AnalysisManagerRec.GetPrimaryBetaLowHigh();
+HPrimaryBeta = AnalysisManagerRec.GetHPrimaryBeta();
+BinWidthFactor = (PrimaryBetaLowHigh.at(1)-PrimaryBetaLowHigh.at(0))/double(BetaBins) / HPrimaryBeta->GetBinWidth(1);
+
+//End MC Weighting things! //Stopping point here, have not yet implemented the weighting
+
 
 //Using i to loop over every event in the tree
 //for(unsigned int i = 80; i < 100; i+=MainLoopScaleFactor){
@@ -194,6 +237,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 	if(pt != nullptr && -fabs(MCEvent->GetPrimaryMomentumDirection().CosTheta()) < -fabs(coslow) && -fabs(MCEvent->GetPrimaryMomentumDirection().CosTheta()) > -fabs(coshigh) && MCEvent->GetPrimaryBeta()*MCEvent->GetPrimaryMomentumDirection()[2] < 0 && fabs(MCEvent->GetPrimaryBeta()) >  betacut && fabs(MCEvent->GetPrimaryBeta()) <  betahigh ){
 	    //-----------EVENT LEVEL CUTS START
 
+		int pid = MCEvent->GetTrack(0)->GetPdg(); //Identity of the primary track should be this
 	    vector<int> MCSpec;
 		vector<unsigned int> MCVolid;
 		vector<double> MCEdep;
@@ -232,7 +276,27 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
             if(MCEdep[k] > 0.4 && MCSpec[k] != pid){MCST = 0; break;} //cout << "NOT single track MC Event" << endl;
         }
 
-        //if(MCST == 1){cout << "Single Track Event!" << endl;}else{cout << "Not ST Event!" << endl;}
+        double RateScale = 0;
+        if( MC_Weight ){
+            //Theoretically save on compute time if put weighting stuff at last possible place.
+            double AcceptanceScale;
+            if (TreeSimulationParameter != nullptr){
+                //acceptance scaling factor based on beta of the primary
+                AcceptanceScale = MainLoopScaleFactor*StartingPlaneAcceptance/(BinWidthFactor*HPrimaryBeta->GetBinContent(HPrimaryBeta->FindBin(Event->GetPrimaryBetaGenerated())));
+
+                if(HPrimaryBeta->GetBinContent(HPrimaryBeta->FindBin(Event->GetPrimaryBetaGenerated())) == 0) AcceptanceScale = 0;
+                //Find the bin associated with the generated beta in the vector, see if it doesn't exist?
+            }else AcceptanceScale = 1; //Set it = to 1 if there's a nullptr? That's a surprise...
+            //cout << "AcceptanceScale = " << AcceptanceScale << endl;
+
+       	    int AngularRegion = -1;
+            for(unsigned int a = 0; a < CosZenithCut.size(); a++) if(Event->GetPrimaryMomentumDirectionGenerated().CosTheta() < CosZenithCut.at(a).first && Event->GetPrimaryMomentumDirectionGenerated().CosTheta() > CosZenithCut.at(a).second) AngularRegion = a;
+            //This is just checking which "bin" the generated cos(theta) is in
+            if(AngularRegion < 0) continue; //Don't bother if angular region wasn't found
+            RateScale = FluxScaleFactor*AcceptanceScale*GMuonTotalFluxUnscaled.at(AngularRegion)->Eval(Event->GetPrimaryBetaGenerated());
+            //cout << "RateScale?? = " << RateScale << endl;
+        }
+        //cout << "RateScale = " << RateScale << endl;
 
         if(MCST){
             int TrueUMBflag = 0;
@@ -270,18 +334,22 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                             if(volspec(VolumeId,2,1) == 0 || volspec(VolumeId,2,1) == 1){
                                 htof[bbin]->Fill( MCEdep[k]*fabs(costheta) );
                                 h2dbetaTOF->Fill( beta ,MCEdep[k]*fabs(costheta) );
+                                if( MC_Weight ) h2dbetaTOF_Weight->Fill( beta ,MCEdep[k]*fabs(costheta),RateScale );
                                 if(beta > 0.8 && beta < 1.0){
                                     htof_cos[cbin]->Fill( MCEdep[k]*fabs(costheta) );
                                     h2dcosTOF->Fill( costheta, MCEdep[k]*fabs(costheta) );
+                                    if( MC_Weight ) h2dcosTOF_Weight->Fill( costheta, MCEdep[k]*fabs(costheta),RateScale );
                                 }
 
                                 if(print) cout << "Flat paddle hit!! " << VolumeId << endl;
                             }else{
                                 htof[bbin]->Fill( MCEdep[k]*sqrt(1-pow(costheta,2)) );
                                 h2dbetaTOF->Fill( beta ,MCEdep[k]*sqrt(1-pow(costheta,2)) );
+                                if( MC_Weight ) h2dbetaTOF_Weight->Fill( beta ,MCEdep[k]*sqrt(1-pow(costheta,2)),RateScale );
                                 if(beta > 0.8 && beta < 1.0){
                                     htof_cos[cbin]->Fill( MCEdep[k]*sqrt(1-pow(costheta,2)) );
                                     h2dcosTOF->Fill( costheta, MCEdep[k]*sqrt(1-pow(costheta,2)) );
+                                    if( MC_Weight ) h2dcosTOF_Weight->Fill( costheta, MCEdep[k]*sqrt(1-pow(costheta,2)), RateScale );
                                 }
                                 if(print) cout << "Vertical paddle hit!! " << endl;
                             }
@@ -290,9 +358,11 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                         if(GGeometryObject::IsTrackerVolume(VolumeId) && MCEdep[k] > TrackerCut){
                             htkr[bbin]->Fill( MCEdep[k]*fabs(costheta) );
                             h2dbetaTKR->Fill( beta ,MCEdep[k]*fabs(costheta) );
+                            if( MC_Weight ) h2dbetaTKR_Weight->Fill( beta, MCEdep[k]*fabs(costheta),RateScale );
                             if(beta > 0.8 && beta < 1.0){
                                 htkr_cos[cbin]->Fill( MCEdep[k]*fabs(costheta) );
                                 h2dcosTKR->Fill( costheta, MCEdep[k]*fabs(costheta) );
+                                if( MC_Weight ) h2dcosTKR_Weight->Fill( costheta, MCEdep[k]*fabs(costheta),RateScale );
                             }
                         }
 
@@ -334,10 +404,14 @@ label_2Dhisto(h2dbetaTOF, pts_TOF, errs_TOF);
 label_2Dhisto(h2dcosTOF, cos_pts_TOF, cos_errs_TOF);
 label_2Dhisto(h2dcosTKR, cos_pts_TKR, cos_errs_TKR);
 
-histplot2f_pts_errs("c1", h2dbetaTKR,pts,errs, "MC True: TKR Energy x Cos(theta) Distribution vs Beta", "Beta" , "Energy x Cos(theta)", "NEntries", out_path + "Tracker2D_vs_Beta" );
-histplot2f_pts_errs("c0", h2dbetaTOF,pts_TOF,errs_TOF,"MC True: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Energy x Cos(theta)", "NEntries", out_path + "TOF2D_vs_Beta" );
-histplot2f_pts_errs("c2", h2dcosTOF,cos_pts_TOF,cos_errs_TOF,"MC True: MIP TOF Energy x Sin/Cos(theta) Distribution vs Cos(Theta)", "Cos(Theta)" , "Angle Corrected Energy", "NEntries", out_path + "TOF2D_vs_Cos" );
-histplot2f_pts_errs("c3", h2dcosTKR,cos_pts_TKR,cos_errs_TKR,"MC True: MIP TKR Energy x Sin/Cos(theta) Distribution vs Cos(Theta)", "Cos(Theta)" , "Energy x Cos(Theta)", "NEntries", out_path + "TKR2D_vs_Cos" );
+histplot2f_pts_errs("c0", h2dbetaTKR,pts,errs, "MC True: TKR Energy x Cos(theta) Distribution vs Beta", "Beta" , "Energy x Cos(theta)", "NEntries", out_path + "TKR2D_vs_Beta" );
+histplot2f_pts_errs("c1", h2dbetaTKR_Weight,pts,errs,"MC True: TKR Energy x Cos(theta) Distribution vs Beta", "Beta" , "Energy x Cos(theta)", "NEntries", out_path + "TKR2D_vs_Beta_Weight" );
+histplot2f_pts_errs("c2", h2dbetaTOF,pts_TOF,errs_TOF,"MC True: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "TOF2D_vs_Beta" );
+histplot2f_pts_errs("c3", h2dbetaTOF_Weight,pts_TOF,errs_TOF,"MC True: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "TOF2D_vs_Beta_Weight" );
+histplot2f_pts_errs("c4", h2dcosTOF,cos_pts_TOF,cos_errs_TOF,"MC True: MIP TOF Energy x Sin/Cos(theta) Distribution vs Cos(Theta)", "Cos(Theta)" , "Angle Corrected Energy", "NEntries", out_path + "TOF2D_vs_Cos" );
+histplot2f_pts_errs("c5", h2dcosTKR,cos_pts_TKR,cos_errs_TKR,"MC True: MIP TKR Energy x Cos(theta) Distribution vs Cos(Theta)", "Cos(Theta)" , "Energy x Cos(Theta)", "NEntries", out_path + "TKR2D_vs_Cos" );
+histplot2f_pts_errs("c6", h2dcosTOF_Weight,cos_pts_TOF,cos_errs_TOF,"MC True: MIP TOF Energy x Sin/Cos(theta) Distribution vs Cos(Theta)", "Cos(Theta)" , "Angle Corrected Energy", "NEntries", out_path + "TOF2D_vs_Cos_Weight" );
+histplot2f_pts_errs("c7", h2dcosTKR_Weight,cos_pts_TKR,cos_errs_TKR,"MC True: MIP TKR Energy x Cos(theta) Distribution vs Cos(Theta)", "Cos(Theta)" , "Energy x Cos(Theta)", "NEntries", out_path + "TKR2D_vs_Cos_Weight" );
 
 
 myfile << "EdepTKR = [" ;
@@ -363,6 +437,7 @@ myfile << "]" << endl;
 
 for(int i = 0; i < cbins; i++){
     histplot1f(("ctof_cos" + to_string(i)).c_str(), htof_cos[i], ( "MIP Edep Cos " + to_string(coslow+cwid*i) + " - " + to_string(coslow+cwid*(i+1)) ).c_str(),"Cos(theta) Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltof_Cos" + to_string(i)).c_str() );
+    histplot1f(("ctkr_cos" + to_string(i)).c_str(), htkr_cos[i], ( "MIP Edep Cos " + to_string(coslow+cwid*i) + " - " + to_string(coslow+cwid*(i+1)) ).c_str(),"Cos(theta) Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltkr_Cos" + to_string(i)).c_str() );
 }
 
 //Histogram for NEntries at a strip level

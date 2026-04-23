@@ -1,5 +1,7 @@
 //Fitting histlist.root output form Edep excutable
-//
+
+//../FitHist -i .
+
 using namespace std;
 
 #include "langaufun.C"

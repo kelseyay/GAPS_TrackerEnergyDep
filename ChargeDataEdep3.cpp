@@ -288,11 +288,16 @@ myfile.close();
 //Histogram section
 //--------------------------------------
 
-HRecB_vs_CalcZ->SaveAs( (out_path + "HRecB_vs_CalcZ.root").c_str() );
-histplot1d("c1", HChargeMip, ("Charge Distribution Rec Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Charge","NEvents", out_path + "Both");
-histplot2d("c2", HRecB_vs_CalcZ, "Z_calc versus Rec_B","Reconstructed Beta","Z_calc","NEntries", out_path + "BothRrec2D");
+string name = "";
+if(TF && TKR) name = "Both";
+if(TF && !TKR) name = "TOF";
+if(!TF && TKR) name = "TKR";
 
-histplot1d("c5", hedep, "Tracker Energy Deposition for "+to_string(betacut)+" - "+to_string(betahigh),"Energy Deposit x Cos(theta)","NEvents", out_path + "Hedep");
+HRecB_vs_CalcZ->SaveAs( (out_path + "HRecB_vs_CalcZ.root").c_str() );
+histplot1d("c1", HChargeMip, (name + ": Charge Distribution Rec Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Charge","NEvents", out_path + name + "_Zedep3");
+histplot2d("c2", HRecB_vs_CalcZ, "Z_calc versus Rec_B","Reconstructed Beta","Z_calc","NEntries", out_path + name + "Rec2D_Zedep3");
+histplot1d("c5", hedep, "Tracker Energy Deposition for "+to_string(betacut)+" - "+to_string(betahigh),"Energy Deposit x Cos(theta)","NEvents", out_path + name + "Hedep_Zedep3");
+
 cout << "Hedep Max Bin Center = " << hedep->GetBinCenter(hedep->GetMaximumBin()) << endl;
 
 

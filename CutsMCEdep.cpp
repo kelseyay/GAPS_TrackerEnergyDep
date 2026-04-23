@@ -51,7 +51,7 @@ namespace cl = Crane::Common;
 int main(int argc, char *argv[]){
 
 GOptionParser* parser = GOptionParser::GetInstance();
-parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
+parser->AddProgramDescription("Efficiencies from cuts at MC");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
 parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.8,"l");
@@ -208,23 +208,24 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 		bool MCST = 0; //MC Single track flag
 		double MaxNPEdep = 0; //Maximum energy deposition not from the primary species
 
-            for(uint t = 0; t < MCEvent->GetNTracks();t++){
+            for(uint t = 0; t < MCEvent->GetNTracks();t++){ //Each particle has its own track
                 //cout << "Track is " << t << endl;
-                for(uint isig=0; isig<MCEvent->GetTrack(t)->GetEnergyDeposition().size(); isig++){
-                    unsigned int VolumeId  = MCEvent->GetTrack(t)->GetVolumeId(isig);
-                    int index = -1;
+                for(uint isig=0; isig<MCEvent->GetTrack(t)->GetEnergyDeposition().size(); isig++){ //Iterate over the energy depositions of the track
+                    unsigned int VolumeId  = MCEvent->GetTrack(t)->GetVolumeId(isig); //Check the volumeId of each of the hits in the iteration
+                    int index = -1; //Note the index = -1 right now
 
-                    for (int k = 0; k < MCVolid.size(); k++) {
+                    for (int k = 0; k < MCVolid.size(); k++) { //Iterate over the VolumeId vector
                         if (MCVolid[k] == VolumeId) { //If volumeid is in the vector already, add the energy deposition to the vector counting edeps there
                             MCEdep[k] = MCEdep[k] + MCEvent->GetTrack(t)->GetEnergyDeposition(isig);
-                            index = k;
+                            index = k; //Set index != -1 to skip over the addition of elements to the vector in the next part of the loop.
                         }
                     }
 
                     if(index == -1){ //If VolumeId is not in the vector, add it to the vector and add the energy deposition to the energy desposition vector
                         //cout << "VID not found, adding" << endl;
                         MCVolid.push_back(VolumeId);
-                        MCSpec.push_back(MCEvent->GetTrack(t)->GetPdg());
+                        MCSpec.push_back(MCEvent->GetTrack(t)->GetPdg()); //This is one sticky point, how to deal with two different particles having edeps in the same location, unsure right now.
+                        //Actually maybe fine; if muon ejects an electron which deposits energy into the same strip, why bother separating those edeps when the instrument would see them as the same?
                         MCEdep.push_back(MCEvent->GetTrack(t)->GetEnergyDeposition(isig));
                     }
 
@@ -244,10 +245,10 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
             if(MCEdep[k] > 0.4)cout << "MC hit: " << MCEdep[k] << " at " << MCVolid[k] << " by " << MCSpec[k] << endl;
         }*/
 
-        for (int k = 0; k < MCVolid.size(); k++) { //Check to see if there's a significant hit from a non-muon particle
-            if(MCEdep[k] > 0.4 && MCSpec[k] == pid){ MCST = 1;}
+        for (int k = 0; k < MCVolid.size(); k++) { //Check to see if there's a significant hit from a primary particle (need to choose)
+            if(MCEdep[k] > 0.4 && MCSpec[k] == pid){ MCST = 1;} //Checking to make sure all significant hits from the primary track
             if(MCEdep[k] > 0.4 && MCSpec[k] != pid){MCST = 0; break;} //cout << "NOT single track MC Event" << endl;
-            }
+        }
 
         if(MCST){ //Checking for single tracks
             MCmust++; //Counter for MC true single tracks
@@ -274,8 +275,6 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
             //cout << endl;
 
             //Flags checked!
-            if( (TrueUMBflag + TrueCORflag > 0) && (TrueCBEtopflag + TrueCBEbotflag + TrueCBEsideflag > 0)){ //Track trigger
-                MCtrktrg++; //cout << "Track trigger passed! " << endl; //Counter for MC true single tracks that pass the track trigger
                 if(TrueCBEsideflag == 0 && TrueCORflag == 0 ){ //No side TOF hits
                     MCnosides++; //cout << "Event: " << i << " NO SIDES HIT!" << endl;
                     if( (TrueUMBflag>0) && (TrueCBEtopflag>0) && (TrueCBEbotflag>0) ) {
@@ -293,8 +292,6 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
                         cout << "Event: " << i << " UMB BOT YES TOP NO!" << endl;
                     }*/
                 }
-
-            } //Track trigger satisfied if one hit in outer TOF (UMB or COR) and one hit in innner TOF (any CBE)
 
         } // End MC single track trigger
 
@@ -330,9 +327,6 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
              //cout << endl;
 
 
-             //Rec checking flags
-             if( (UMBflag + CORflag > 0) && (CBEtopflag + CBEbotflag + CBEsideflag > 0)){ //Track trigger
-                 trktrg++; //cout << "Track trigger passed! " << endl; //Counter for MC true single tracks that pass the track trigger
                  if(CBEsideflag == 0 && CORflag == 0 ){ //No side TOF hits
                      nosides++; //cout << "Event: " << i << " NO SIDES HIT!" << endl;
                      if( (UMBflag>0) && (CBEtopflag>0) && (CBEbotflag>0) ) {
@@ -346,8 +340,6 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
                          //cout << "Event: " << i << " UMB TOP NO BOT!" << endl;
                      }
                  } //No sides
-
-             } //Track trigger satisfied if one hit in outer TOF (UMB or COR) and one hit in innner TOF (any CBE)
 
 
 			//-----------EVENT LEVEL CUTS END
