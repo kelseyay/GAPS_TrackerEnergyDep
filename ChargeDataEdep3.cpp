@@ -1,3 +1,6 @@
+//HEY YOU NEED TO FIX THE TRUNCATED MEAN!!!
+//SHOULD BE TAKING THE LOWER HALF OF FLOOR(N) HITS!!!
+
 //How to use: ./DZedep3 -i /data1/nextcloud/cra_data/data/2025/production/v26.01/reconstructed/flight/251226/starlink251226_17 -s 0 -t 1 -f 1 -k 1 -r 2 -o test/
 //Also use: ./DZedep3 -i /home/kelsey/simulations/simdat/flight/251226/26.01/starlink251226_1 -s 0 -t 1 -f 1 -k 1 -r 2 -o test/
 
@@ -53,7 +56,8 @@ cout << FilenameRoot << endl;
 
 //Prepare textile for saving values
 std::ofstream myfile;
-myfile.open(out_path + "MCCharge.txt");
+string txtname = "RecChargeZedep3.txt";
+myfile.open(out_path + txtname);
 myfile << TString::Format( "Filename : %s", reco_path.c_str() )  << endl;
 myfile << TString::Format( "Beta High : %f", betahigh) << endl;
 myfile << TString::Format( "Beta Low : %f", betacut) << endl;
@@ -127,7 +131,7 @@ TH1D * HTofMult = Plotting.DefineTH1D("HTofMult",200, 0.1, 2, "Multiplicative Fa
 TH1D * HTkrMult = Plotting.DefineTH1D("HTkrMult",200, 0.1, 2, "Multiplicative Factor TKR", "entries", 0.5, 1e4);
 
 //TH2D * HGenB_vs_GenZ = new TH2D("HGenB_vs_GenZ","Gen_Beta * Gen_Z vs Gen_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1 );
-TH2D * HRecB_vs_CalcZ = new TH2D("HRecB_vs_CalcZ","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 4);
+TH2D * HRecB_vs_CalcZ = new TH2D("HRecB_vs_CalcZ","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 3);
 //TH2D * HTrunM_vs_RecB= new TH2D("HTrunM_vs_RecB","Tr_Mean vs Rec_Beta",50, betacut - 0.1, betahigh + 0.1,50,  0.5 , 3.5);
 
 //TH2D * HRecB_vs_Cal = new TH2D("HRecB_vs_RecBTrunM","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1 );
@@ -248,7 +252,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 				if(Zevent.size() < NHitsmin){
 				    TrZ = 0;
 				}else{
-			        for(unsigned int isig = 0; isig < double(Zevent.size())/2; isig++){
+			        for(unsigned int isig = 0; isig < double(Zevent.size())/2; isig++){ //THIS SHOULD BE FLOOR TRMEAN!!!
 						TrZ += Zevent.at(isig);
 						CtrTrZ++;
 					}
@@ -280,7 +284,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 }  //Closed bracket for iteration through tree events, move on to the next event i
 
 
-myfile.open(out_path + "MCCharge.txt",std::ios::app);
+myfile.open(out_path + txtname,std::ios::app);
 myfile << "Total Events/Mainscale Factor " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 myfile.close();
 
@@ -294,9 +298,9 @@ if(TF && !TKR) name = "TOF";
 if(!TF && TKR) name = "TKR";
 
 HRecB_vs_CalcZ->SaveAs( (out_path + "HRecB_vs_CalcZ.root").c_str() );
-histplot1d("c1", HChargeMip, (name + ": Charge Distribution Rec Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Charge","NEvents", out_path + name + "_Zedep3");
+histplot1d("c1", HChargeMip, (name + ": Charge Distribution Rec Beta " + roundstr_d(betacut,2) + " - " + roundstr_d(betahigh,2)  + " TK=" + roundstr_d(tk,2) + " TF=" + roundstr_d(tf,2)).c_str(),"Charge","NEvents", out_path + name + "_Zedep3");
 histplot2d("c2", HRecB_vs_CalcZ, "Z_calc versus Rec_B","Reconstructed Beta","Z_calc","NEntries", out_path + name + "Rec2D_Zedep3");
-histplot1d("c5", hedep, "Tracker Energy Deposition for "+to_string(betacut)+" - "+to_string(betahigh),"Energy Deposit x Cos(theta)","NEvents", out_path + name + "Hedep_Zedep3");
+histplot1d("c5", hedep, "Tracker Energy Deposition for "+to_string(betacut)+" - "+to_string(betahigh),"Angle Corrected Energy Deposition","NEvents", out_path + name + "Hedep_Zedep3");
 
 cout << "Hedep Max Bin Center = " << hedep->GetBinCenter(hedep->GetMaximumBin()) << endl;
 

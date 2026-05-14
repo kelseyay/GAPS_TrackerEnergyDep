@@ -1,4 +1,4 @@
-//To run, do ./OccuNoCuts -i /home/kelsey/simulations/simdat/ground/251204/ethernet251204_0 -o test
+//To run, do ./OccNoCuts -i /home/kelsey/simulations/simdat/ground/251204/ethernet251204_0 -o test
 
 using namespace std;
 
@@ -63,8 +63,26 @@ TH2D* HTofUMBOccu = Plotting.DefineTH2D("HTofUMBOccu", 168, -2000, 2000, 168, -2
 TH2D* HTofCBEtopOccu = Plotting.DefineTH2D("HTofCBEtopOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
 TH2D* HTofCBEbotOccu = Plotting.DefineTH2D("HTofCBEbotOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
 
+TH2D* HTofCOR_XOccu = Plotting.DefineTH2D("HTofCOR_XOccu", 50, -1200, 1200, 49, -175, 1540, "rec. hit position y [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
+TH2D* HTofCOR_min_XOccu = Plotting.DefineTH2D("HTofCOR_min_XOccu", 50, -1200, 1200, 49, -175, 1540, "rec. hit position y [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
+TH2D* HTofCOR_YOccu = Plotting.DefineTH2D("HTofCOR_YOccu", 50, -1200, 1200, 49, -175, 1540, "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
+TH2D* HTofCOR_min_YOccu = Plotting.DefineTH2D("HTofCOR_min_YOccu", 50, -1200, 1200, 49, -175, 1540, "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
+
+TH2D* HTofCBE_XOccu = Plotting.DefineTH2D("HTofCBE_XOccu", 20, -800, 800, 36, -120, 1300, "rec. hit position y [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
+TH2D* HTofCBE_min_XOccu = Plotting.DefineTH2D("HTofCBE_min_XOccu", 20, -800, 800, 36, -120, 1300, "rec. hit position y [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
+TH2D* HTofCBE_YOccu = Plotting.DefineTH2D("HTofCBE_YOccu", 20, -800, 800, 36, -120, 1300,  "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
+TH2D* HTofCBE_min_YOccu = Plotting.DefineTH2D("HTofCBE_min_YOccu", 20, -800, 800, 36, -120, 1300,  "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
+
+
 //auto hcol21 = new TH2F("hcol21","MPV Full Tracker",nrows*nstrips,0,nrows*nstrips,nlayers*nmods,0,nlayers*nmods);
 auto hnentries = new TH2F("hnentries","Full Tracker Strip-Level NHits",nrows*nstrips,0,nrows*nstrips,nlayers*nmods,0,nlayers*nmods);
+
+//Prepare textile for saving values
+std::ofstream myfile;
+myfile.open(out_path + "OccuNoCuts.txt");
+myfile << TString::Format( "Filename : %s", reco_path.c_str() )  << endl;
+myfile << "NEvents = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
+myfile.close();
 
 //Now we can go over the loop
 TreeRec->GetEntry(0);
@@ -97,6 +115,65 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                 if(volspec(VolumeId,0,3) == 111){ //If the hit is CBEbot, fill the Cbebot Occu plot
                     HTofCBEbotOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().X(), Event->GetHitSeries().at(isig).GetPosition().Y());
                 }
+
+                //CBE filling:
+                if(volspec(VolumeId,0,3) == 114){ //If the hit is COR +Y, fill the COR +Y Occu plot
+                    HTofCBE_YOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().X(), Event->GetHitSeries().at(isig).GetPosition().Z());
+                    //cout << "Event is " << i << " COR +Y Hit! " << endl;
+                }
+
+                if(volspec(VolumeId,0,3) == 115){ //If the hit is COR -X, fill the COR -X Occu plot
+                    HTofCBE_min_YOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().X(), Event->GetHitSeries().at(isig).GetPosition().Z());
+                    //cout << "Event is " << i << " COR +Y Hit! " << endl;
+                }
+
+                if(volspec(VolumeId,0,3) == 112){ //If the hit is COR +X, fill the COR +X Occu plot
+                    HTofCBE_XOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().Y(), Event->GetHitSeries().at(isig).GetPosition().Z());
+                    //cout << "Event is " << i << " COR +X Hit! " << endl;
+                }
+                if(volspec(VolumeId,0,4) == 1160 || volspec(VolumeId,0,4) == 1161){ //If the hit is COR +X, fill the COR +X Occu plot
+                    HTofCBE_XOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().Y(), Event->GetHitSeries().at(isig).GetPosition().Z());
+                    //cout << "Event is " << i << " COR +X 3PP Hit! " << endl;
+                }
+                if(volspec(VolumeId,0,3) == 113){ //If the hit is COR -X, fill the COR -X Occu plot
+                    HTofCBE_min_XOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().Y(), Event->GetHitSeries().at(isig).GetPosition().Z());
+                    //cout << "Event is " << i << " COR +X Hit! " << endl;
+                }
+                if(volspec(VolumeId,0,4) == 1162 || volspec(VolumeId,0,4) == 1163){ //If the hit is COR +X, fill the COR +X Occu plot
+                    HTofCBE_min_XOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().Y(), Event->GetHitSeries().at(isig).GetPosition().Z());
+                    //cout << "Event is " << i << " COR +X 3PP Hit! " << endl;
+                }
+
+
+                //COR filling:
+                if(volspec(VolumeId,0,3) == 104){ //If the hit is COR +Y, fill the COR +Y Occu plot
+                    HTofCOR_YOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().X(), Event->GetHitSeries().at(isig).GetPosition().Z());
+                    //cout << "Event is " << i << " COR +Y Hit! " << endl;
+                }
+
+                if(volspec(VolumeId,0,3) == 105){ //If the hit is COR -X, fill the COR -X Occu plot
+                    HTofCOR_min_YOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().X(), Event->GetHitSeries().at(isig).GetPosition().Z());
+                    //cout << "Event is " << i << " COR +Y Hit! " << endl;
+                }
+
+                if(volspec(VolumeId,0,3) == 102){ //If the hit is COR +X, fill the COR +X Occu plot
+                    HTofCOR_XOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().Y(), Event->GetHitSeries().at(isig).GetPosition().Z());
+                    //cout << "Event is " << i << " COR +X Hit! " << endl;
+                }
+                if(volspec(VolumeId,0,4) == 1060 || volspec(VolumeId,0,4) == 1061){ //If the hit is COR +X, fill the COR +X Occu plot
+                    HTofCOR_XOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().Y(), Event->GetHitSeries().at(isig).GetPosition().Z());
+                    //cout << "Event is " << i << " COR +X 3PP Hit! " << endl;
+                }
+
+                if(volspec(VolumeId,0,3) == 103){ //If the hit is COR -X, fill the COR -X Occu plot
+                    HTofCOR_min_XOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().Y(), Event->GetHitSeries().at(isig).GetPosition().Z());
+                    //cout << "Event is " << i << " COR +X Hit! " << endl;
+                }
+                if(volspec(VolumeId,0,4) == 1062 || volspec(VolumeId,0,4) == 1063){ //If the hit is COR +X, fill the COR +X Occu plot
+                    HTofCOR_min_XOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().Y(), Event->GetHitSeries().at(isig).GetPosition().Z());
+                    //cout << "Event is " << i << " COR +X 3PP Hit! " << endl;
+                }
+
             }
 
             if(GGeometryObject::IsTrackerVolume(VolumeId) && Event->GetHitSeries().at(isig).GetTotalEnergyDeposition() > TrackerCut){
@@ -129,15 +206,27 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 
 //Save all histograms so they can be reopened.
-HTofUMBOccu->SaveAs( (out_path + "HTofUMBOccu.root").c_str() );
-HTofCBEtopOccu->SaveAs( (out_path + "HTofCBEtopOccu.root").c_str() );
-HTofCBEbotOccu->SaveAs( (out_path + "HTofCBEbotOccu.root").c_str() );
-hnentries->SaveAs( (out_path + "NhitsTracker.root").c_str() );
+//HTofUMBOccu->SaveAs( (out_path + "HTofUMBOccu.root").c_str() );
+//HTofCBEtopOccu->SaveAs( (out_path + "HTofCBEtopOccu.root").c_str() );
+//HTofCBEbotOccu->SaveAs( (out_path + "HTofCBEbotOccu.root").c_str() );
+//hnentries->SaveAs( (out_path + "NhitsTracker.root").c_str() );
 
 histplot2d("c1",HTofUMBOccu,"Umbrella Occupancy Plot","X Location Umb Hit","Y Location Umb Hit","NEntries",out_path+"TofUmbOccu");
 histplot2d("c2",HTofCBEtopOccu,"CBE Top Occupancy Plot","X Location Umb Hit","Y Location Umb Hit","NEntries",out_path+"TofCBEtopOccu");
 histplot2d("c3",HTofCBEbotOccu,"CBE Bot Occupancy Plot","X Location Umb Hit","Y Location Umb Hit","NEntries",out_path+"TofCBEbotOccu");
-histplot2f("c4",hnentries,"Full Tracker Strip Level NHits","row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries",out_path+"TrackerEntries");
+histplot2d("c4",HTofCOR_XOccu,"COR +X Occupancy Plot","Y Location Umb Hit","Z Location Umb Hit","NEntries",out_path+"TofCOR_XOccu");
+histplot2d("c5",HTofCOR_min_XOccu,"COR -X Occupancy Plot","Y Location Umb Hit","Z Location Umb Hit","NEntries",out_path+"TofCOR_min_XOccu");
+histplot2d("c6",HTofCOR_YOccu,"COR +Y Occupancy Plot","X Location Umb Hit","Z Location Umb Hit","NEntries",out_path+"TofCOR_YOccu");
+histplot2d("c7",HTofCOR_min_YOccu,"COR -Y Occupancy Plot","X Location Umb Hit","Z Location Umb Hit","NEntries",out_path+"TofCOR_min_YOccu");
+
+histplot2d("c8",HTofCBE_XOccu,"CBE +X Occupancy Plot","Y Location Umb Hit","Z Location Umb Hit","NEntries",out_path+"TofCBE_XOccu");
+histplot2d("c5",HTofCBE_min_XOccu,"CBE -X Occupancy Plot","Y Location Umb Hit","Z Location Umb Hit","NEntries",out_path+"TofCBE_min_XOccu");
+histplot2d("c6",HTofCBE_YOccu,"CBE +Y Occupancy Plot","X Location Umb Hit","Z Location Umb Hit","NEntries",out_path+"TofCBE_YOccu");
+histplot2d("c7",HTofCBE_min_YOccu,"CBE -Y Occupancy Plot","X Location Umb Hit","Z Location Umb Hit","NEntries",out_path+"TofCBE_min_YOccu");
+
+histplot2f("ctkr",hnentries,"Full Tracker Strip Level NHits","row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries",out_path+"TrackerEntries");
+
+myfile.close();
 
 cout << endl << "I am done" << endl;
 return 1;

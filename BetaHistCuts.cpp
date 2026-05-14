@@ -1,5 +1,4 @@
-//If you want to make a dead simple histogram of something in the Rec tree, here you go!!
-
+//Pretty simple Beta histograms (work for MC and ground/flight data both.)
 using namespace std;
 
 #include "KYtools.C"
@@ -124,9 +123,11 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 	//Cuts are implemented in this chunk:
 	if(Event->GetNTracks() == 1){  //First select the single track event
-		bool Umbflag = 0;
-		bool CBEtopflag = 0;
-		bool CBEbotflag = 0;
+	    int UMBflag = 0;
+        int CORflag = 0;
+        int CBEtopflag = 0;
+        int CBEbotflag = 0;
+        int CBEsideflag = 0;
 
 		CTrackRec* pt = Event->GetPrimaryTrack();
 		uint pt_index = 0;
@@ -134,14 +135,29 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
 		//if(pt != nullptr && fabs(Event->GetPrimaryBetaGenerated()) >  betacut && fabs(Event->GetPrimaryBetaGenerated()) < betahigh){
-		if(pt != nullptr && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) < betahigh){
-		//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
-			//cout << "Event is " << i << endl;
+		//if(pt != nullptr && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) < betahigh){
+		if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 
+
+        //Reconstructed information, fortunately only one track.
+        for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
+            unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig);
+            if(Event->GetTrack(0)->GetEnergyDeposition(isig) > 0.4){
+                if(volspec(VolumeId,0,3) == 100)UMBflag++;
+                if(volspec(VolumeId,0,3) == 110)CBEtopflag++;
+                if(volspec(VolumeId,0,3) == 111)CBEbotflag++;
+                if(volspec(VolumeId,0,3) == 112 || volspec(VolumeId,0,3) == 113 || volspec(VolumeId,0,3) == 114 || volspec(VolumeId,0,3) == 115 || volspec(VolumeId,0,3) == 116)CBEsideflag++;
+                if(volspec(VolumeId,0,3) == 102 || volspec(VolumeId,0,3) == 103 || volspec(VolumeId,0,3) == 104 || volspec(VolumeId,0,3) == 105 || volspec(VolumeId,0,3) == 106)CORflag++;
+            }
+            //cout << "Rec: Hit " << isig << " Edep " << Event->GetTrack(0)->GetEnergyDeposition(isig) << " at " << VolumeId << endl;
+        }
+
+        if(UMBflag > 0 && CBEtopflag > 0 && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
 			HBeta->Fill(Event->GetPrimaryBeta());
 			bcounts++;
 			if(GEN) HGenB->Fill(Event->GetPrimaryBetaGenerated());
 			if(GEN) HRecB_vs_GenB->Fill(Event->GetPrimaryBetaGenerated(),Event->GetPrimaryBeta());
+        }
 
 		} //Closed bracket for event level cut
 
@@ -156,9 +172,9 @@ HBeta->SetMaximum(bcounts);
 
 //Histogram section
 //-------------------------------------
-histplot2d("c1",HRecB_vs_GenB,"Rec_B versus Gen_B","Generated Beta", "Reconstructed Beta","NEntries", out_path + "BothgenBRecB" );
-histplot1d("c2",HGenB,"Gen_B","Generated Beta","NEntries", out_path + "GenB" );
-histplot1d("c3",HBeta,"Rec_B","Reconstructed Beta","NEntries", out_path + "Rec_B" );
+histplot2d("c1",HRecB_vs_GenB,"Rec_B versus Gen_B","Generated Beta", "Reconstructed Beta","NEntries", out_path + "Cuts_BothgenBRecB" );
+histplot1d("c2",HGenB,"Gen_B","Generated Beta","NEntries", out_path + "Cuts_GenB" );
+histplot1d("c3",HBeta,"Rec_B","Reconstructed Beta","NEntries", out_path + "Cuts_Rec_B" );
 
 cout << endl << "I am done" << endl;
 

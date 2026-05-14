@@ -107,7 +107,7 @@ cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/
 
 //Using i to loop over every event in the tree
 //for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor)
-for(unsigned int i = 0; i < 2; i+=MainLoopScaleFactor){
+for(unsigned int i = 0; i < 10; i+=MainLoopScaleFactor){
     TreeRec->GetEntry(i);
     TreeMC->GetEntry(i);
 
@@ -115,6 +115,12 @@ for(unsigned int i = 0; i < 2; i+=MainLoopScaleFactor){
     cout << "Event ID? " << Event->GetEventId() << endl;
     cout << "Event Number? " << Event->GetEventNumber() << endl; //Gviz2D is for sure pulling Event number!
     cout << "Reconstruction used: " << Event->GetActiveReconstruction() << endl;
+
+	for(unsigned int k = 0; k < Event->GetTriggerVolumeId().size(); k++){
+		cout << "Trigger VID ? " << Event->GetTriggerVolumeId().at(k) << endl;
+	}
+
+
 	//if( TreeMC->GetEntries() % (i+1) == 0){cout << "Time at Event " << i << " = " << Event->GetEventTime() << endl;}
 
 	//CTrackMc* pt = Event->GetPrimaryTrack();
@@ -130,6 +136,8 @@ for(unsigned int i = 0; i < 2; i+=MainLoopScaleFactor){
 
 	cout << endl << "Rec info " << endl;
     cout << "Rec Number of tracks " << Event->GetNTracks() << endl;
+    //cout << "Trigger source: " << Event->GetTriggerSources().at(0) << endl;
+
 
     //if(Event->GetNTracks() == 1){ //Output single track events
     for(uint t = 0; t < Event->GetNTracks();t++){
@@ -144,10 +152,12 @@ for(unsigned int i = 0; i < 2; i+=MainLoopScaleFactor){
     cout << endl << "All hits? " << endl;
 
     //All hits, remove on track requirement
+    /*
     for(uint isig=0; isig<Event->GetVolumeId().size(); isig++){
         cout << "Hit " << isig << " VolumrId " << Event->GetVolumeId().at(isig) << " Edep " << Event->GetHitSeries().at(isig).GetTotalEnergyDeposition() << endl;
         cout << "Position " << Event->GetHitSeries().at(isig).GetPosition().X() << endl;
     }
+    */
 
     /*
 	cout << endl << "MC info " << endl;

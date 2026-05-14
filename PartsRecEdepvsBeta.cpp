@@ -1,4 +1,9 @@
+//This plot makes a directory and puts a bunch of stuff into it
+
 //To use: ./PartsRecEdepvB -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1_FTFP_BERT_1757850432_rec -o test2 -l 0.4 -u 1 -b 12
+//Alternatively: /home/kelsey/GAPS_TrackerEnergyDep/build/PartsRecEdepvB -i /home/kelsey/simulations/simdat/ground/251204/26.01/ethernet251204_1 -l 0.55 -u 1 -b 12 -t 10
+//For flight data with track trigger:
+// ./PartsRecEdepvB -i /home/kelsey/simulations/simdat/flight/251226/26.01/starlink251226_15 -o Edep_vs_Bins/ -l 0.2 -u 1 -b 12 -r 2
 //Adding layers for TOF UMB, CBE_top, CBE_bot
 //Adding layers for tracker
 //Keep it 2D, so need 3 TOF bins and 7 tracker layers :o
@@ -64,10 +69,10 @@ int cbins = parser->GetOption<int>("cbins");
 int TRG = parser->GetOption<int>("TRG");
 bool MC_Weight = parser->GetOption<bool>("MC_Weighting");
 
-if(betacut <= 0 || betacut >=1){ betacut = 0.2; cout << "Error with low beta choice. Setting Beta low to 0.2" << endl; }
+if(betacut < 0 || betacut >=1){ betacut = 0.2; cout << "Error with low beta choice. Setting Beta low to 0.2" << endl; }
 cout << "beta cut = " << betacut << endl;
 
-if(betahigh <= 0 || betahigh >=2 || betahigh < betacut){ betahigh = 1; cout << "Error with high/low beta choice! Setting Beta upper to 1" << endl; }
+if(betahigh < 0 || betahigh >=5 || betahigh < betacut){ betahigh = 1; cout << "Error with high/low beta choice! Setting Beta upper to 1" << endl; }
 cout << "beta high = " << betahigh << endl;
 
 double bwid = (betahigh-betacut)/bbins;
@@ -79,6 +84,14 @@ sprintf(FilenameRoot,"%s*.root",reco_path.c_str());
 cout << FilenameRoot << endl;
 
 if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash!" << endl; out_path = out_path + '/'; }
+
+string outdir = "Beta_" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2) + "Edep_vs_Bins";
+char SaveDir[600];
+sprintf(SaveDir, "mkdir %s", outdir.c_str());
+int success = system(SaveDir);
+if (success == 0){std::cout << "Directory " << SaveDir <<" created!" << std::endl;};
+
+out_path = out_path + outdir + '/';
 
 //Prepare Rec Event
 CEventRec* Event = new CEventRec(); //New reconstructed event
@@ -105,9 +118,8 @@ const Int_t NBins = 50;
 const int Ntof = 3; //Number of TOF sections, let's just do UMB, CBE_top, CBE_bot.
 const int Ntkr = 7; //Number of TKR layers
 
-//Full tracker histogram range
-double mpvmin = 0.66;
-double mpvmax = 0.75;
+int pass_cuts_ct = 0;
+int pass_cuts_st_ct = 0;
 
 //Prepare textile for saving values
 std::ofstream myfile;
@@ -125,9 +137,12 @@ TH1F * htof_cos[cbins];
 TH1F * htkr_cos[cbins];
 
 TH2F * h2dbetaTOF[Ntof]; //Start with
-h2dbetaTOF[0] = new TH2F("h2dbetaTOF_UMB","Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,10);
-h2dbetaTOF[1] = new TH2F("h2dbetaTOF_CBE_top","Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,10);
-h2dbetaTOF[2] = new TH2F("h2dbetaTOF_CBE_bot","Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,10);
+h2dbetaTOF[0] = new TH2F("h2dbetaTOF_UMB","Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,15);
+h2dbetaTOF[1] = new TH2F("h2dbetaTOF_CBE_top","Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,15);
+h2dbetaTOF[2] = new TH2F("h2dbetaTOF_CBE_bot","Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,15);
+
+auto h2dbetaTKR_full = new TH2F("h2dbetaTKR_full","Full TKR: Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,10);
+auto h2dbetaTOF_full = new TH2F("h2dbetaTOF_full","Full TOF: Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,10);
 
 TH2F * h2dbetaTKR[Ntkr];
 
@@ -172,7 +187,9 @@ char text[400]; //This variable is used later to name the plots
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 cout << "Beta high " << betahigh << endl;
 cout << "Beta cut " << betacut << endl;
-cout << "MPV range on 2D Full Tracker will be " << mpvmin << " - " << mpvmax << endl;
+cout << "Theta bins " << cbins << endl;
+cout << "Cos low " << coslow << endl;
+cout << "Cos high " << coshigh << endl;
 
 bool print = 0;
 
@@ -200,12 +217,13 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
     //Still don't want to do anything with weirt nullptr tracks in the reconstruction
 
 	if(pt != nullptr && ( (TRG == 0) || ((int)Event->GetTriggerSources().at(0) == TRG) ) && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -fabs(coslow) && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -fabs(coshigh) && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
-
+	pass_cuts_ct++;
 	//-----------EVENT LEVEL CUTS START
 
         //if(MCST == 1){cout << "Single Track Event!" << endl;}else{cout << "Not ST Event!" << endl;}
 
         if(Event->GetNTracks() == 1){  //First select the single track event
+            pass_cuts_st_ct++;
             int UMBflag = 0;
             int CORflag = 0;
             int CBEtopflag = 0;
@@ -238,6 +256,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                             if(volspec(VolumeId,0,3) == 100) h2dbetaTOF[0]->Fill( beta , Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(costheta) ); //I think this is the best way!
                             if(volspec(VolumeId,0,3) == 110) h2dbetaTOF[1]->Fill( beta , Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(costheta) );
                             if(volspec(VolumeId,0,3) == 111) h2dbetaTOF[2]->Fill( beta , Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(costheta) );
+                            h2dbetaTOF_full->Fill( beta , Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(costheta) );
                             if(beta > 0.8 && beta < 1.0){
                                 htof_cos[cbin]->Fill(  Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(costheta) );
                                 h2dcosTOF->Fill( costheta,  Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(costheta) );
@@ -246,7 +265,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                             if(print) cout << "Flat paddle hit!! " << VolumeId << endl;
                         }else{
                             htof[bbin]->Fill( Event->GetTrack(0)->GetEnergyDeposition(isig)*sqrt(1-pow(costheta,2)) );
-                            //h2dbetaTOF[0]->Fill( beta, Event->GetTrack(0)->GetEnergyDeposition(isig)*sqrt(1-pow(costheta,2)) );
+                            h2dbetaTOF_full->Fill( beta, Event->GetTrack(0)->GetEnergyDeposition(isig)*sqrt(1-pow(costheta,2)) );
                              if(beta > 0.8 && beta < 1.0){
                                 htof_cos[cbin]->Fill( Event->GetTrack(0)->GetEnergyDeposition(isig)*sqrt(1-pow(costheta,2)) );
                                 h2dcosTOF->Fill( costheta, Event->GetTrack(0)->GetEnergyDeposition(isig)*sqrt(1-pow(costheta,2)) );
@@ -258,6 +277,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                     if(GGeometryObject::IsTrackerVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TrackerCut){
                         int layer = GGeometryObject::GetTrackerLayer(VolumeId);
                         htkr[bbin]->Fill( Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(costheta) );
+                        h2dbetaTKR_full->Fill( beta ,Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(costheta) );
                         h2dbetaTKR[layer]->Fill( beta ,Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(costheta) );
                         if(beta > 0.8 && beta < 1.0){
                             htkr_cos[cbin]->Fill( Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(costheta) );
@@ -294,7 +314,10 @@ TGraph *errs = new TGraph(); //Points to plot along with the histogram.
 
 TGraph *pts_TOF = new TGraph(); //Points to plot along with the histogram.
 TGraph *errs_TOF = new TGraph(); //Points to plot along with the histogram.
-
+TGraph *pts_full = new TGraph(); //Points to plot along with the histogram.
+TGraph *errs_full = new TGraph(); //Points to plot along with the histogram.
+TGraph *pts_TOF_full = new TGraph(); //Points to plot along with the histogram.
+TGraph *errs_TOF_full = new TGraph(); //Points to plot along with the histogram.
 
 //Good
 //cout << "GetNBinsX histogram " <<  h2dbetaTKR->GetNbinsX() << " GetNBinsY histogram " << h2dbetaTKR->GetNbinsY() << endl;
@@ -303,6 +326,12 @@ label_2Dhisto(h2dbetaTKR[0], pts, errs);
 label_2Dhisto(h2dbetaTOF[0], pts_TOF, errs_TOF);
 label_2Dhisto(h2dcosTOF, cos_pts_TOF, cos_errs_TOF);
 label_2Dhisto(h2dcosTKR, cos_pts_TKR, cos_errs_TKR);
+label_2Dhisto(h2dbetaTKR_full, pts_full, errs_full);
+label_2Dhisto(h2dbetaTOF_full, pts_TOF_full, errs_TOF_full);
+
+
+histplot2f_pts_errs("c_tkr_full", h2dbetaTKR_full,pts_full,errs, "Rec: Full TKR Energy x Cos(theta) Distribution vs Beta", "Beta" , "Energy x Cos(theta)", "NEntries", out_path + "TKR2D_vs_Beta_Rec" );
+histplot2f_pts_errs("c_tof_full", h2dbetaTOF_full,pts_TOF_full,errs_TOF_full,"Rec: Full TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "TOF2D_vs_Beta_Rec" );
 
 histplot2f_pts_errs("c0", h2dbetaTOF[0],pts_TOF,errs_TOF,"UMB Rec: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "UMB_TOF2D_vs_Beta_Rec" );
 histplot2f_pts_errs("c4", h2dbetaTOF[1],pts_TOF,errs_TOF,"CBE_top Rec: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "CBE_top_TOF2D_vs_Beta_Rec" );
@@ -335,6 +364,9 @@ for(int i = 0; i < bbins; i++){
 }
 myfile << "]" << endl;
 
+myfile << "h2dbetaTKR_full Nentries = " << h2dbetaTKR_full->GetEntries() << endl;
+myfile << "h2dbetaTOF_full Nentries = " << h2dbetaTOF_full->GetEntries() << endl;
+
 for(int i = 0; i < cbins; i++){
     histplot1f(("ctof_cos" + to_string(i)).c_str(), htof_cos[i], ( "MIP Edep Cos " + to_string(coslow+cwid*i) + " - " + to_string(coslow+cwid*(i+1)) ).c_str(),"Cos(theta) Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltof_Cos" + to_string(i)).c_str() );
     histplot1f(("ctkr_cos" + to_string(i)).c_str(), htkr_cos[i], ( "MIP Edep Cos " + to_string(coslow+cwid*i) + " - " + to_string(coslow+cwid*(i+1)) ).c_str(),"Cos(theta) Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltkr_Cos" + to_string(i)).c_str() );
@@ -343,6 +375,9 @@ for(int i = 0; i < cbins; i++){
 //Histogram for NEntries at a strip level
 
 //--------------------------------------
+
+cout << "Base Cuts Passed: " << pass_cuts_ct << endl;
+cout << "Base Cuts AND single track Passed: " << pass_cuts_st_ct << endl;
 
 myfile.close();
 

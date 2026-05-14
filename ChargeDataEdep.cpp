@@ -1,3 +1,5 @@
+//How to use:
+
 using namespace std;
 
 #include "KYtools.C"
@@ -89,7 +91,7 @@ cout << FilenameRoot << endl;
 
 //Prepare textile for saving values
 std::ofstream myfile;
-myfile.open(out_path + "MCCharge.txt");
+myfile.open(out_path + "Zedep_Charge.txt");
 myfile << TString::Format( "Filename : %s", reco_path.c_str() )  << endl;
 myfile << TString::Format( "Beta High : %f", betahigh) << endl;
 myfile << TString::Format( "Beta Low : %f", betacut) << endl;
@@ -148,8 +150,8 @@ TH1D * HTruncatedMeanEnergyDepositionMip = Plotting.DefineTH1D("HTruncatedMeanEn
 TH1D * HChargeMip = Plotting.DefineTH1D("HChargeMip",200, 0.1, 4, "particle charge for downgoing MIP", "entries", 0.5, 1e4);
 
 //TH2D * HGenB_vs_GenZ = new TH2D("HGenB_vs_GenZ","Gen_Beta * Gen_Z vs Gen_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.5*betacut -0.1 , 1.5*betahigh*2 + 0.1 );
-TH2D * HRecB_vs_RecBTrunM = new TH2D("HRecB_vs_RecBTrunM","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 4 );
-TH2D * HTrunM_vs_RecB= new TH2D("HTrunM_vs_RecB","Tr_Mean vs Rec_Beta",50, betacut - 0.1, betahigh + 0.1,50,  0.1 , 4);
+TH2D * HRecB_vs_RecBTrunM = new TH2D("HRecB_vs_RecBTrunM","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 3 );
+TH2D * HTrunM_vs_RecB= new TH2D("HTrunM_vs_RecB","Tr_Mean vs Rec_Beta",50, betacut - 0.1, betahigh + 0.1,50,  0.1 , 3);
 
 //TH1D * hedep;
 //hedep = new TH1D ("h0", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
@@ -172,16 +174,16 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 //for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //This is not the "correct" way to do this, but it's probably fine. Should be skipping M each time, but that seems to be really slow!!
     TreeRec->GetEntry(i);
 
+    if( ((int)i % (int)ceil(TreeRec->GetEntries()/(MainLoopScaleFactor*10))) == 0){
+	    cout << "Event number " << i << endl;
+	}
+
 	//Cuts are implemented in this chunk:
 	if(Event->GetNTracks() == 1){  //First select the single track event
 	    strkctr++;
 		bool Umbflag = 0;
 		bool CBEtopflag = 0;
 		bool CBEbotflag = 0;
-
-		if( ((int)i % (int)ceil(TreeRec->GetEntries()/(MainLoopScaleFactor*10))) == 0){
-		    cout << "Event number " << i << endl;
-		}
 
 		CTrackRec* pt = Event->GetPrimaryTrack();
 		uint pt_index = 0;
@@ -199,11 +201,6 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 			vector<double> EnergyDepositionMip;
 			for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
                 unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig); //Check the VolumeId of the event
-                //cout << "Volume ID is " << VolumeId << " Energy is " << Event->GetTrack(0)->GetEnergyDeposition(isig) << endl;
-                //cout << "Volume ID third digit is " << volspec(VolumeId,2,1) << endl;
-                //cout << "volspec(VolumeId,0,3) = " << volspec(VolumeId,0,3) << endl;
-                //cout << "volspec(VolumeId,0,2) = " << volspec(VolumeId,0,2) << endl;
-                //cout << "volspec(VolumeId,3,1) " << volspec(VolumeId,2,1) << endl;
 
                 if(TF && GGeometryObject::IsTofVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TofCutLow){
                     //A hit in the COR or CBE_sides needs to be multiplied by sin(theta) instead of cos(theta)
@@ -278,7 +275,12 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 }  //Closed bracket for iteration through tree events, move on to the next event i
 
 
-myfile.open(out_path + "MCCharge.txt",std::ios::app);
+string name = "";
+if(TF && TKR) name = "Both";
+if(TF && !TKR) name = "TOF";
+if(!TF && TKR) name = "TKR";
+
+myfile.open(out_path + "Zedep_Charge.txt",std::ios::app);
 myfile << "Total Events/Mainscale Factor " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 myfile.close();
 
@@ -286,9 +288,9 @@ myfile.close();
 //Histogram section
 //--------------------------------------
 
-histplot1d("c1", HChargeMip, "MIP Charge Distribution","Charge","NEvents", out_path + "Both");
-histplot2d("c3", HRecB_vs_RecBTrunM, "Rec_B * sqrt(Tr_Mean) versus Rec_B","Reconstructed Beta","sqrt(truncated mean E) * Reconstructed B","NEntries", out_path + "BothRrec2D");
-histplot2d("c6", HTrunM_vs_RecB, "sqrt(Tr_Mean) versus Rec_B","Reconstructed Beta","sqrt(truncated mean E)","NEntries", out_path + "BothRecBTrunM");
+histplot1d("c1", HChargeMip, (name + ": MIP Charge Distribution Beta " + roundstr_d(betacut,2) + " - " + roundstr_d(betahigh,2)  + " TK=" + roundstr_d(TrackerAngleCorrectedMip,2) + " TF=" + roundstr_d(TofAngleCorrectedMip,2) ).c_str() ,"Charge","NEvents", out_path + name + "_Zedep");
+histplot2d("c3", HRecB_vs_RecBTrunM, "Rec_B * sqrt(Tr_Mean) versus Rec_B","Reconstructed Beta","sqrt(truncated mean E) * Reconstructed B","NEntries", out_path + name + "_Zedep_Rec2D");
+histplot2d("c6", HTrunM_vs_RecB, "sqrt(Tr_Mean) versus Rec_B","Reconstructed Beta","sqrt(truncated mean E)","NEntries", out_path + name + "_Zedep_RecBTrunM");
 
 cout << "TOF: " << TF << " TKR: " << TKR << endl;
 cout << "Max bin Center is  " << HChargeMip->GetBinCenter(HChargeMip->GetMaximumBin()) << " factor should be " << pow(1/HChargeMip->GetBinCenter(HChargeMip->GetMaximumBin()),2) << endl;

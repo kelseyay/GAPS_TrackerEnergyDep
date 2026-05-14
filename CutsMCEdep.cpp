@@ -1,52 +1,8 @@
-//How to use: ./MCCutEff -i /home/kelsey/simulations/simdat/mu/v.2.1.2/mu-_gaps_triggerlevel1_FTFP_BERT_1744342800_rec -o test
-
+//How to use: ./MCCutEff -i /home/kelsey/simulations/simdat/mu/v.2.1.2/mu-_gaps_triggerlevel1_FTFP_BERT_1744342800_rec -o test -w 1
+//Super not thrilled with how slow this is...
 using namespace std;
 
-#include "KYtools.C"
-
-#include <TColor.h>
-#include <TProfile.h>
-#include <TMath.h>
-#include <TChain.h>
-#include <TGraph.h>
-#include <TGraphErrors.h>
-#include <TGraphAsymmErrors.h>
-#include <TLatex.h>
-#include <TMinuit.h>
-#include <vector>
-#include <map>
-#include <string>
-#include <stdlib.h>
-#include "TH1.h"
-#include "TCanvas.h"
-
-//FIXME: does this work on mac?
-#include <sys/stat.h>
-
-//#include "CRawTrk.hh"
-
-#include "CEventMc.hh"
-#include "CAnalysisManager.hh"
-#include "GAnalysisIdentification.hh"
-#include "GBasicTrigger.hh"
-#include "GSimulationParameter.hh"
-#include "GPreselection.hh"
-#include "CraneConstants.hh"
-#include "CraneLogging.hh"
-#include "GPlottingTools.hh"
-#include "CNet.hh"
-#include "CBackpropagation.hh"
-
-#include "GGeometry.hh"
-
-#ifdef USE_BOOST_PROGRAM_OPTIONS
-#include "GOptionParser.hh"
-#include "GFileIO.hh"
-#endif
-
-using namespace Crane::Analysis;
-namespace ca = Crane::Analysis;
-namespace cl = Crane::Common;
+#include "KYtools.C" //Everything is already included here lol
 
 int main(int argc, char *argv[]){
 
@@ -56,9 +12,12 @@ parser->AddCommandLineOption<string>("in_path", "path to instrument data files",
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
 parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.8,"l");
 parser->AddCommandLineOption<double>("beta_high", "upper Beta Cut",1,"u");
+parser->AddCommandLineOption<bool>("MC_Weighting", "Monte Carlo Weighting on or off?",0,"w");
 parser->AddCommandLineOption<int>("MainloopScale", "Main loop scale factor",1,"m");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
+
+bool MC_Weight = parser->GetOption<bool>("MC_Weighting");
 
 double betacut = parser->GetOption<double>("beta_low");
 if(betacut <= 0 || betacut >=1){ betacut = 0.8; cout << "Error with low beta choice. Setting Beta low to 0.8" << endl; }
@@ -75,23 +34,11 @@ cout << "out path " << out_path << endl;
 //cout << "out path last string " << out_path[out_path.length()-1] << endl;
 
 if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash!" << endl; out_path = out_path + '/'; }
-
-//TH1F * HCBEtop = new TH1F ("h0", "CBEtop Panel Occupancy", 24, 0,12);
-//TH1F * HCBEbot = new TH1F ("h1", "CBEbot Panel Occupancy", 24, 0,12);
-
 int MainLoopScaleFactor = parser->GetOption<int>("MainloopScale");
 
 char FilenameRoot[400];
 sprintf(FilenameRoot,"%s*.root",reco_path.c_str());
 cout << FilenameRoot << endl;
-
-//Prepare textile for saving values
-std::ofstream myfile;
-myfile.open(out_path + "MCTruthCuts.txt");
-myfile << TString::Format( "Filename : %s", reco_path.c_str() )  << endl;
-myfile << TString::Format( "Beta High : %f", betahigh) << endl;
-myfile << TString::Format( "Beta Low : %f", betacut) << endl;
-myfile.close();
 
 //Prepare reconstructed event
 CEventRec* Event = new CEventRec(); //New reconstructed event
@@ -106,56 +53,87 @@ TreeMC->SetBranchAddress("Mc", &MCEvent); //Set the branch address using Event (
 TreeMC->Add(FilenameRoot);
 
 //int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
-double TofCutLow = 0; //No low Tof cut right now
-double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
+double TofCutLow = 0.4;
+//double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
 
-double xlow = 0.3; //Low range for histogram MeV
-double xhigh = 5; //High range for histogram MeV
+//Prepare textile for saving values
+std::ofstream myfile;
+myfile.open(out_path + "MCTruthCuts.txt");
+myfile << TString::Format( "Filename : %s", reco_path.c_str() )  << endl;
+myfile << TString::Format( "Beta High : %f", betahigh) << endl;
+myfile << TString::Format( "Beta Low : %f", betacut) << endl << endl;
+myfile.close();
 
-double coshigh = 0.54; //0.995; //0.92 //0.54 is the highest angle that can hit UMB, CBEtop, CBEbot
-double coslow = 1; //0.62 //0.8
-//double fitlow = 0.5;
-//double fithigh = 3.5;
-double acutlow = 1.5;
-const Int_t NBins = 50;
+const int NCuts = 7; //Start simple!
+string MCTrue_cutnames[NCuts+1] = {
+    " Total NEvents ",
+    " Total Events in Generated Beta Range ",
+    " Single Track Events in Beta Range ",
+    " All above, No sides ",
+    " No Sides, YES UMB ",
+    " No Sides, YES UMB, YES CT ",
+    " No Sides, YES UMB, CT, YES CB ",
+    " No Sides, YES UMB, CT, NO CB ",
+};
 
-//Full tracker histogram range
-//double mpvmin = 0.66;
-//double mpvmax = 0.75;
+string Weighted_MCTrue_cutnames[NCuts+1];
+string MCReco_cutnames[NCuts+1];
+string Weighted_MCReco_cutnames[NCuts+1];
 
-//From fitted peaks from flight! Check over!
-double TofAngleCorrectedMip = 0.82;
-double TrackerAngleCorrectedMip = 0.57;
+for(int k = 0; k < NCuts + 1; k++){
+    MCReco_cutnames[k] = "MC Reco: " + MCTrue_cutnames[k];
+    Weighted_MCTrue_cutnames[k] = "Weighted MC True" + MCTrue_cutnames[k];
+    Weighted_MCReco_cutnames[k] = "Weighted MC Reco" + MCTrue_cutnames[k];
+    MCTrue_cutnames[k] = "MC True: " + MCTrue_cutnames[k];
+}
 
-int pid = 13; //2212; //13; Mu
+int MCTrue_cuts[NCuts+1] = {};
+int MCReco_cuts[NCuts+1] = {};
+float Weighted_MCTrue_cuts[NCuts+1] = {};
+float Weighted_MCReco_cuts[NCuts+1] = {};
 
-int passctr = 0;
-int strkctr = 0;
+MCTrue_cuts[0] = TreeRec->GetEntries(); //Number of events (not a cut)
+MCReco_cuts[0] = TreeRec->GetEntries();
 
-int MCpassB = 0;
-int MCmust = 0; //Counter for MC true single tracks
-int MCtrktrg = 0; //Counter for MC true single tracks that pass the track trigger
-int MCnosides = 0; //Counter for MC true single tracks that pass the track trigger that have no side hits
-int MCyesumb_ctop_cbot = 0; //Counter for MC true single tracks that pass the track trigger that have no side hits YES umb, cbe_top, cbe_bot hits
-int MCyesumb_ctop_nocbot = 0; //Counter for MC true single tracks that pass the track trigger that have no side hits YES umb, cbe_top, NO cbe_bot hits
+//MC Weighting things below:
+ca::GPlottingTools Plotting;
+TChain*TreeSimulationParameter = new TChain("SimulationParameterTree");
+TreeSimulationParameter->Add(FilenameRoot);
+GSimulationParameter * Parameter = new GSimulationParameter;
+TreeSimulationParameter->SetBranchAddress("SimulationParameter", &Parameter);
+TreeSimulationParameter->GetEntry(0);
 
-int passB = 0; //Counter for reco pass beta
-int must = 0; //Counter for reco single tracks
-int trktrg = 0; //Counter for reco single tracks that pass the track trigger
-int nosides = 0; //Counter for reco single tracks that pass the track trigger that have no side hits
-int yesumb_ctop_cbot = 0; //Counter for reco single tracks that pass the track trigger that have no side hits YES umb, cbe_top, cbe_bot hits
-int yesumb_ctop_nocbot = 0; //Counter for reco single tracks that pass the track trigger that have no side hits YES umb, cbe_top, NO cbe_bot hits
+double FluxScaleFactor = 71.1552/32.058750*0.25;
 
+int BetaBins = 25;
+double StartingPlaneAcceptance = 1;
+TH1D* HPrimaryBeta = nullptr;
+double BinWidthFactor = 1;
+std::vector<double> PrimaryBetaLowHigh;
+
+vector<pair<double, double> > CosZenithCut;
+CosZenithCut.push_back(make_pair(-0.75, -1));
+CosZenithCut.push_back(make_pair(-0.5, -0.75));
+CosZenithCut.push_back(make_pair(-0.25, -0.5));
+CosZenithCut.push_back(make_pair(0, -0.25));
+
+vector<TGraph*> GMuonTotalFluxUnscaled;
+GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.875"), 0.1057));
+GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.625"), 0.1057));
+GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.375"), 0.1057));
+GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.125"), 0.1057));
+
+CAnalysisManager AnalysisManagerRec;
+AnalysisManagerRec.SetGSimulationParameterTChain(TreeSimulationParameter);
+StartingPlaneAcceptance = AnalysisManagerRec.GetStartingPlaneAcceptance();
+PrimaryBetaLowHigh = AnalysisManagerRec.GetPrimaryBetaLowHigh();
+HPrimaryBeta = AnalysisManagerRec.GetHPrimaryBeta();
+BinWidthFactor = (PrimaryBetaLowHigh.at(1)-PrimaryBetaLowHigh.at(0))/double(BetaBins) / HPrimaryBeta->GetBinWidth(1);
+
+//End MC Weighting things setup!
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
-
-//For Plotting purposes
-ca::GPlottingTools Plotting;
-char text[400]; //This variable is used later to name the plots
-
-//TH1D * hedep;
-//hedep = new TH1D ("h0", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
 
 //How many entries:
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
@@ -167,48 +145,66 @@ cout << "Beta cut " << betacut << endl;
 TreeRec->GetEntry(0);
 TreeMC->GetEntry(0);
 
-myfile.open(out_path + "MCTruthCuts.txt",std::ios::app);
-
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 
 //Using i to loop over every event in the tree
-//for(unsigned int i = 0; i < 40; i+=MainLoopScaleFactor){
-//for(unsigned int i = 60500; i < 90600; i+=MainLoopScaleFactor){
+//for(unsigned int i = 0; i < 100; i+=MainLoopScaleFactor){
 for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //This is not the "correct" way to do this, but it's probably fine. Should be skipping M each time, but that seems to be really slow!!
     TreeRec->GetEntry(i);
     TreeMC->GetEntry(i);
-
-	//Cuts are implemented in this chunk:
 
 	if( ((int)i % (int)ceil(TreeRec->GetEntries()/(MainLoopScaleFactor*10))) == 0){
 	    cout << "Event number " << i << endl;
 		cout << Event->GetActiveReconstruction() << endl;
 	}
 
-	CTrackRec* pt = Event->GetPrimaryTrack();
-	uint pt_index = 0;
-    for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
+	//Lead with MC weighting, EACH EVENT has a weighting based on the ground flux of muons, angular and beta weighted!
+    double RateScale = 0;
+    if( MC_Weight ){
+        //Theoretically save on compute time if put weighting stuff at last possible place.
+        double AcceptanceScale;
+        if (TreeSimulationParameter != nullptr){
+            //acceptance scaling factor based on beta of the primary
+            AcceptanceScale = MainLoopScaleFactor*StartingPlaneAcceptance/(BinWidthFactor*HPrimaryBeta->GetBinContent(HPrimaryBeta->FindBin(MCEvent->GetPrimaryBeta())));
 
-	//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
-	//if(pt != nullptr && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
-	if(pt != nullptr && fabs(MCEvent->GetPrimaryBeta()) >  betacut && fabs(MCEvent->GetPrimaryBeta()) <  betahigh ){
-	//if((pt != nullptr && pt->GetChi2()/pt->GetNdof()) < 3.2 && -fabs(MCEvent->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(MCEvent->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && MCEvent->GetPrimaryBeta()*MCEvent->GetPrimaryMomentumDirection()[2] < 0 && fabs(MCEvent->GetPrimaryBeta()) >  betacut && fabs(MCEvent->GetPrimaryBeta()) <  betahigh ){
-	//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*MCEvent->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
-	//if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirectionGenerated().CosTheta()) < -coshigh && Event->GetPrimaryBetaGenerated()*Event->GetPrimaryMomentumDirectionGenerated()[2] < 0 && fabs(Event->GetPrimaryBetaGenerated()) >  betacut && fabs(Event->GetPrimaryBetaGenerated()) <  betahigh ){
+            if(HPrimaryBeta->GetBinContent(HPrimaryBeta->FindBin(MCEvent->GetPrimaryBeta())) == 0) AcceptanceScale = 0;
+            //Find the bin associated with the generated beta in the vector, see if it doesn't exist?
+         }else AcceptanceScale = 1; //Set it = to 1 if there's a nullptr? That's a surprise...
+        //cout << "AcceptanceScale = " << AcceptanceScale << endl;
 
-	    MCpassB++;
+        int AngularRegion = -1;
+        for(unsigned int a = 0; a < CosZenithCut.size(); a++) if(MCEvent->GetPrimaryMomentumDirection().CosTheta() < CosZenithCut.at(a).first && MCEvent->GetPrimaryMomentumDirection().CosTheta() > CosZenithCut.at(a).second) AngularRegion = a;
+        //This is just checking which "bin" the generated cos(theta) is in
+        if(AngularRegion < 0) continue; //Don't bother if angular region wasn't found
+        RateScale = FluxScaleFactor*AcceptanceScale*GMuonTotalFluxUnscaled.at(AngularRegion)->Eval(MCEvent->GetPrimaryBeta());
+        //cout << "Event is " << i << " Beta is " << MCEvent->GetPrimaryBeta() << " Cos(theta) is " << MCEvent->GetPrimaryMomentumDirection().CosTheta() << " RateScale?? = " << RateScale << endl;
+    }
+    //Total_Weighted = Total_Weighted + RateScale;
+    //cout << "RateScale = " << RateScale << endl;
+    Weighted_MCTrue_cuts[0] = Weighted_MCTrue_cuts[0] + RateScale;
+    //cout << " Weighted_MCTrue_cuts[0] = " << Weighted_MCTrue_cuts[0] << endl;
+    Weighted_MCReco_cuts[0] = Weighted_MCReco_cuts[0] + RateScale;
+
+
+	if(fabs(MCEvent->GetPrimaryBeta()) >  betacut && fabs(MCEvent->GetPrimaryBeta()) <  betahigh ){
+	    MCTrue_cuts[1]++;
+		Weighted_MCTrue_cuts[1] = Weighted_MCTrue_cuts[1] + RateScale;
+		MCReco_cuts[1]++; //Single Track
+        Weighted_MCReco_cuts[1] = Weighted_MCReco_cuts[1] + RateScale;
 
 		//-----------EVENT LEVEL CUT APPLIED
 		//cout << endl << "Event " << i << endl;
 		//cout << "MC info " << endl;
 		//cout << "Number of tracks " << MCEvent->GetNTracks() << endl;
+
+		//Might make sense to put this into KYtools as the MC Event framework
+		int pid = MCEvent->GetTrack(0)->GetPdg(); //Identity of the primary track should be this
 	    vector<int> MCSpec;
 		vector<unsigned int> MCVolid;
 		vector<double> MCEdep;
 		bool MCST = 0; //MC Single track flag
-		double MaxNPEdep = 0; //Maximum energy deposition not from the primary species
 
-            for(uint t = 0; t < MCEvent->GetNTracks();t++){ //Each particle has its own track
+		    for(uint t = 0; t < MCEvent->GetNTracks();t++){ //Each particle has its own track
                 //cout << "Track is " << t << endl;
                 for(uint isig=0; isig<MCEvent->GetTrack(t)->GetEnergyDeposition().size(); isig++){ //Iterate over the energy depositions of the track
                     unsigned int VolumeId  = MCEvent->GetTrack(t)->GetVolumeId(isig); //Check the volumeId of each of the hits in the iteration
@@ -240,19 +236,16 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 
             //cout << endl;
 
-        /*
-        for(int k = 0; k < MCVolid.size(); k++){
-            if(MCEdep[k] > 0.4)cout << "MC hit: " << MCEdep[k] << " at " << MCVolid[k] << " by " << MCSpec[k] << endl;
-        }*/
-
         for (int k = 0; k < MCVolid.size(); k++) { //Check to see if there's a significant hit from a primary particle (need to choose)
             if(MCEdep[k] > 0.4 && MCSpec[k] == pid){ MCST = 1;} //Checking to make sure all significant hits from the primary track
             if(MCEdep[k] > 0.4 && MCSpec[k] != pid){MCST = 0; break;} //cout << "NOT single track MC Event" << endl;
         }
+        if(!MCST){cout << "Event " << i << " MC Truth Non Single Track!" << endl;}
 
         if(MCST){ //Checking for single tracks
-            MCmust++; //Counter for MC true single tracks
-            //cout << "Event " << i << " MC Single track! " << endl;
+            MCTrue_cuts[2]++; //Single Tracks in beta range
+            Weighted_MCTrue_cuts[2] = Weighted_MCTrue_cuts[2] + RateScale;
+            cout << "Event " << i << " MC Truth Single track! " << endl;
 
             for (int k = 0; k < MCVolid.size(); k++) {
                 if(MCEdep[k] > 0.4){
@@ -267,36 +260,39 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
                 //cout << "VID " << MCVolid[k] << " total edep " << MCEdep[k] << endl;
             } //This seems to be a fine way of determining total edeps in the instrument from MC
 
-            //cout << "TrueUMBflag " << TrueUMBflag << endl;
-            //cout << "TrueCORflag " << TrueCORflag << endl;
-            //cout << "TrueCBE_topflag " << TrueCBEtopflag << endl;
-            //cout << "TrueCBE_botflag " << TrueCBEbotflag << endl;
-            //cout << "TrueCBE_sideflag " << TrueCBEsideflag << endl;
-            //cout << endl;
-
             //Flags checked!
                 if(TrueCBEsideflag == 0 && TrueCORflag == 0 ){ //No side TOF hits
-                    MCnosides++; //cout << "Event: " << i << " NO SIDES HIT!" << endl;
-                    if( (TrueUMBflag>0) && (TrueCBEtopflag>0) && (TrueCBEbotflag>0) ) {
-                        MCyesumb_ctop_cbot++;
-                        //myfile << i << "\t" << "Truth: YesUMBCtopCBot" << endl;
-                        //cout << "Event: " << i << " UMB TOP BOT YES!" << endl;
+                    MCTrue_cuts[3]++; //MC No Sides
+                    Weighted_MCTrue_cuts[3] = Weighted_MCTrue_cuts[3] + RateScale;
+                    if(TrueUMBflag > 0){
+                        MCTrue_cuts[4]++; //MC No sides, YES UMB
+                        Weighted_MCTrue_cuts[4] = Weighted_MCTrue_cuts[4] + RateScale;
+                        if(TrueCBEtopflag > 0){
+                            MCTrue_cuts[5]++; //No sides, YES UMB, YES CT
+                            Weighted_MCTrue_cuts[5] = Weighted_MCTrue_cuts[5] + RateScale;
+                            if(TrueCBEbotflag>0){
+                                MCTrue_cuts[6]++; //No sides, YES UMB, YES CT, YES CB
+                                Weighted_MCTrue_cuts[6] = Weighted_MCTrue_cuts[6] + RateScale;
+                            }else{
+                                MCTrue_cuts[7]++; //No sides, YES UMB, YES CT, NO CB
+                                Weighted_MCTrue_cuts[7] = Weighted_MCTrue_cuts[7] + RateScale;
+                            }
+                        }
                     }
-                    if( (TrueUMBflag>0) && (TrueCBEtopflag>0) && (TrueCBEbotflag==0) ){
-                        MCyesumb_ctop_nocbot++;
-                        //myfile << i << "\t" << "Truth: YesUMBCtop NoCBot" << endl;
-                        //cout << "Event: " << i << " UMB TOP NO BOT!" << endl;
-                    }
-                    /*if( (TrueUMBflag>0) && (TrueCBEtopflag==0) && (TrueCBEbotflag>0) ) {
-                        MCyesumb_cbot_nocbot++;
-                        cout << "Event: " << i << " UMB BOT YES TOP NO!" << endl;
-                    }*/
                 }
 
         } // End MC single track trigger
 
-        if(Event->GetNTracks() == 1){
-            must++;
+       	CTrackRec* pt = Event->GetPrimaryTrack();
+        uint pt_index = 0;
+        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
+
+        if(pt != nullptr && Event->GetNTracks() != 1){cout << "Event " << i << " MC Reco Non Single Track!" << endl;}
+        //Start cuts on reconstructed data.
+        if(pt != nullptr && Event->GetNTracks() == 1){
+            cout << "Event " << i << " MC Reco Single Track!" << endl;
+            MCReco_cuts[2]++; //Single Track
+            Weighted_MCReco_cuts[2] = Weighted_MCReco_cuts[2] + RateScale;
 
             int UMBflag = 0;
             int CORflag = 0;
@@ -318,29 +314,25 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
                  //cout << "Rec: Hit " << isig << " Edep " << Event->GetTrack(0)->GetEnergyDeposition(isig) << " at " << VolumeId << endl;
              }
 
-             //cout << "Event " << i << endl;
-             //cout << "UMBflag " << UMBflag << endl;
-             //cout << "CORflag " << CORflag << endl;
-             //cout << "CBE_topflag " << CBEtopflag << endl;
-             //cout << "CBE_botflag " << CBEbotflag << endl;
-             //cout << "CBE_sideflag " << CBEsideflag << endl;
-             //cout << endl;
-
-
-                 if(CBEsideflag == 0 && CORflag == 0 ){ //No side TOF hits
-                     nosides++; //cout << "Event: " << i << " NO SIDES HIT!" << endl;
-                     if( (UMBflag>0) && (CBEtopflag>0) && (CBEbotflag>0) ) {
-                         yesumb_ctop_cbot++;
-                         //myfile << i << "\t" << "Rec: YesUMBCtopCBot" << endl;
-                         //cout << "Event: " << i << " UMB TOP BOT YES!" << endl;
+             if(CBEsideflag == 0 && CORflag == 0 ){ //No side TOF hits
+                 MCReco_cuts[3]++; //No sides
+                 Weighted_MCReco_cuts[3] = Weighted_MCReco_cuts[3] + RateScale;
+                 if(UMBflag > 0){
+                     MCReco_cuts[4]++; //No sides, YES UMB
+                     Weighted_MCReco_cuts[4] = Weighted_MCReco_cuts[4] + RateScale;
+                     if(CBEtopflag > 0){
+                         MCReco_cuts[5]++; //No sides YES UMB, YES CBEtop
+                         Weighted_MCReco_cuts[5] = Weighted_MCReco_cuts[5] + RateScale;
+                         if((CBEbotflag>0)){
+                             MCReco_cuts[6]++; //No sides YES UMB, YES CBEtop
+                             Weighted_MCReco_cuts[6] = Weighted_MCReco_cuts[6] + RateScale;
+                         }else{
+                             MCReco_cuts[7]++; //No sides YES UMB, YES CBEtop
+                             Weighted_MCReco_cuts[7] = Weighted_MCReco_cuts[7] + RateScale;
+                         }
                      }
-                     if( (UMBflag>0) && (CBEtopflag>0) && (CBEbotflag==0) ){
-                         yesumb_ctop_nocbot++;
-                         //myfile << i << "\t" << "Rec: YesUMBCtop NoCBot" << endl;
-                         //cout << "Event: " << i << " UMB TOP NO BOT!" << endl;
-                     }
-                 } //No sides
-
+                 }
+             } //No sides
 
 			//-----------EVENT LEVEL CUTS END
 
@@ -350,35 +342,44 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 
 }  //Closed bracket for iteration through tree events, move on to the next event i
 
+//myfile << "Total number of events: " << (float)TreeRec->GetEntries() << endl;
+myfile.open(out_path + "MCTruthCuts.txt",std::ios::app);
+//myfile << "Total number of events: " << (float)TreeRec->GetEntries() << endl;
 
-myfile.open(out_path + "MCCuts.txt",std::ios::app);
+for(int k = 0; k < NCuts+1; k++){
+    myfile << MCTrue_cutnames[k] << MCTrue_cuts[k] << endl;
+    if(k > 0 && k!= NCuts) myfile << fixed << setprecision(2) << 100*(float)MCTrue_cuts[k]/(float)MCTrue_cuts[k-1] <<"%" <<  endl; //NEntries doesn't need to divide by anything
+    if(k == NCuts) myfile << fixed << setprecision(2) << 100*(float)MCTrue_cuts[k]/(float)MCTrue_cuts[k-2] <<"%" <<  endl; //Final cut is a percentage of two above
+}
+
+myfile << endl;
+
+for(int k = 0; k < NCuts+1; k++){
+    myfile << Weighted_MCTrue_cutnames[k] << Weighted_MCTrue_cuts[k] << endl;
+    if(k > 0 && k!= NCuts) myfile << fixed << setprecision(2) << 100*(float)Weighted_MCTrue_cuts[k]/(float)Weighted_MCTrue_cuts[k-1] <<"%" <<  endl; //NEntries doesn't need to divide by anything
+    if(k == NCuts) myfile << fixed << setprecision(2) << 100*(float)Weighted_MCTrue_cuts[k]/(float)Weighted_MCTrue_cuts[k-2] <<"%" <<  endl; //Final cut is a percentage of two above
+}
+
+myfile << endl;
+
+for(int k = 0; k < NCuts+1; k++){
+    myfile << MCReco_cutnames[k] << MCReco_cuts[k] << endl;
+    if(k > 0 && k!= NCuts) myfile << fixed << setprecision(2) << 100*(float)MCReco_cuts[k]/(float)MCReco_cuts[k-1] <<"%" <<  endl; //NEntries doesn't need to divide by anything
+    if(k == NCuts) myfile << fixed << setprecision(2) << 100*(float)MCReco_cuts[k]/(float)MCReco_cuts[k-2] <<"%" <<  endl; //Final cut is a percentage of two above
+}
+
+myfile << endl;
+
+for(int k = 0; k < NCuts+1; k++){
+    myfile << Weighted_MCReco_cutnames[k] << Weighted_MCReco_cuts[k] << endl;
+    if(k > 0 && k!= NCuts) myfile << fixed << setprecision(2) << 100*(float)Weighted_MCReco_cuts[k]/(float)Weighted_MCReco_cuts[k-1] <<"%" <<  endl; //NEntries doesn't need to divide by anything
+    if(k == NCuts) myfile << fixed << setprecision(2) << 100*(float)Weighted_MCReco_cuts[k]/(float)Weighted_MCReco_cuts[k-2] <<"%" <<  endl; //Final cut is a percentage of two above
+}
+
+myfile << endl;
+
+
 myfile.close();
-
-cout << "MC Total Events in Beta Range " << MCpassB << endl;
-cout << fixed << setprecision(1) << 100*(float)MCpassB/(float)TreeRec->GetEntries() <<"%" <<  endl;
-cout << "MC Single Track Events " << MCmust << endl;
-cout << fixed << setprecision(1) << 100*(float)MCmust/(float)MCpassB << "%" << endl;
-cout << "MC Track Trigger Satisfied " << MCtrktrg << endl;
-cout << fixed << setprecision(1) << 100*(float)MCtrktrg/(float)MCmust <<"%" <<  endl;
-cout << "MC Track Trigger Satisfied, No sides " << MCnosides << endl;
-cout << fixed << setprecision(1) << 100*(float)MCnosides/(float)MCtrktrg << "%" << endl;
-cout << "MC Track Trigger Satisfied, No sides, UMB, CT, CB " << MCyesumb_ctop_cbot << endl;
-cout << fixed << setprecision(1) << 100*(float)MCyesumb_ctop_cbot/(float)MCnosides <<"%" <<  endl;
-cout << "MC Track Trigger Satisfied, No sides or CB, UMB, CT " << MCyesumb_ctop_nocbot << endl;
-cout << fixed << setprecision(1) << 100*(float)MCyesumb_ctop_nocbot/(float)MCnosides <<"%" <<  endl;
-
-cout << "MC Total Events in Beta Range " << MCpassB << endl;
-cout << fixed << setprecision(1) << 100*(float)MCpassB/(float)TreeRec->GetEntries() <<"%" <<  endl;
-cout << "Reco Single Track Events " << must << endl;
-cout << fixed << setprecision(1) << 100*(float)must/(float)MCpassB << "%" << endl;
-cout << "Reco Track Trigger Satisfied " << trktrg << endl;
-cout << fixed << setprecision(1) << 100*(float)trktrg/(float)must << "%" << endl;
-cout << "Reco Track Trigger Satisfied, No sides " << nosides << endl;
-cout << fixed << setprecision(1) << 100*(float)nosides/(float)trktrg << "%" << endl;
-cout << "Reco Track Trigger Satisfied, No sides, UMB, CT, CB " << yesumb_ctop_cbot << endl;
-cout << fixed << setprecision(1) << 100*(float)yesumb_ctop_cbot/(float)nosides <<"%" <<  endl;
-cout << "Reco Track Trigger Satisfied, No sides or CB, UMB, CT " << yesumb_ctop_nocbot << endl;
-cout << fixed << setprecision(1) << 100*(float)yesumb_ctop_nocbot/(float)nosides <<"%" <<  endl;
 
 //histplot1f("c1", HCBEtop, "CBE top Paddle Occupancy Plot","Paddle Number","NEvents", out_path + "CBE1dOccu");
 //histplot1f("c2", HCBEbot, "CBE bot Paddle Occupancy Plot","Paddle Number","NEvents", out_path + "CBE1dOccu");

@@ -171,6 +171,8 @@ TH2D * HRecB_vs_CalcZ = new TH2D("HRecB_vs_CalcZ","Rec_Beta * Tr_Mean vs Rec_Bet
 TH1D * hedep; //Full tracker energy deposition plot
 hedep = new TH1D ("h0", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
 
+string txtname = "RecChargeZedep3.txt";
+
 
 //How many entries:
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
@@ -314,7 +316,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 }  //Closed bracket for iteration through tree events, move on to the next event i
 
 
-myfile.open(out_path + "MCCharge.txt",std::ios::app);
+myfile.open(out_path + txtname,std::ios::app);
 myfile << "Total Events/Mainscale Factor " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 myfile.close();
 
@@ -322,17 +324,23 @@ myfile.close();
 //Histogram section
 //--------------------------------------
 
-HRecB_vs_CalcZ->SaveAs( (out_path + "HRecB_vs_CalcZ.root").c_str() );
-histplot1d("c1", HChargeMip, ("Charge Distribution Rec Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Charge","NEvents", out_path + "Both");
-histplot2d("c2", HRecB_vs_CalcZ, "Z_calc versus Rec_B","Reconstructed Beta","Z_calc","NEntries", out_path + "BothRrec2D");
+
+string name = "";
+if(TF && TKR) name = "Both";
+if(TF && !TKR) name = "TOF";
+if(!TF && TKR) name = "TKR";
+
+HRecB_vs_CalcZ->SaveAs( (out_path + name + "HRecB_vs_CalcZ.root").c_str() );
+histplot1d("c1", HChargeMip, ("Charge Distribution Rec Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Charge","NEvents", out_path + name);
+histplot2d("c2", HRecB_vs_CalcZ, "Z_calc versus Rec_B","Reconstructed Beta","Z_calc","NEntries", out_path + name + "Rec2D");
 
 
 //LMAO Right I did this perverse thing to my code to try to map my results onto Philip's and didn't comment on it. Okay, just focus on the HChargeMIP!
-histplot1d("c3", HTofMult, ("Tof Mult Factor " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Factor","NEvents", out_path + "TofFactor");
-cout << "HTofMult Mean " << HTofMult->GetMean() << endl;
-histplot1d("c4", HTkrMult, ("Tkr Mult Factor " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Factor","NEvents", out_path + "TkrFactor");
-cout << "HTkrMult Mean " << HTkrMult->GetMean() << endl;
-histplot1d("c5", hedep, "Tracker Energy Deposition for "+to_string(betacut)+" - "+to_string(betahigh),"Energy Deposit x Cos(theta)","NEvents", out_path + "Hedep");
+//histplot1d("c3", HTofMult, ("Tof Mult Factor " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Factor","NEvents", out_path + "TofFactor");
+//cout << "HTofMult Mean " << HTofMult->GetMean() << endl;
+//histplot1d("c4", HTkrMult, ("Tkr Mult Factor " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(),"Factor","NEvents", out_path + "TkrFactor");
+//cout << "HTkrMult Mean " << HTkrMult->GetMean() << endl;
+histplot1d("c5", hedep, "Tracker Energy Deposition for "+to_string(betacut)+" - "+to_string(betahigh),"Energy Deposit x Cos(theta)","NEvents", out_path + name + "Hedep");
 cout << "Hedep Max Bin Center = " << hedep->GetBinCenter(hedep->GetMaximumBin()) << endl;
 
 
