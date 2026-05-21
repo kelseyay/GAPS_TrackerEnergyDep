@@ -1,4 +1,4 @@
-//How to use: ./RecCutEff -i /home/kelsey/simulations/simdat/mu/v.2.1.2/mu-_gaps_triggerlevel1_FTFP_BERT_1744342800_rec -o test
+//How to use: ./FlightCuts -i /home/kelsey/simulations/simdat/mu/v.2.1.2/mu-_gaps_triggerlevel1_FTFP_BERT_1744342800_rec -o test
 
 using namespace std;
 
@@ -37,8 +37,6 @@ cout << "out path " << out_path << endl;
 
 if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash!" << endl; out_path = out_path + '/'; }
 
-string title = "RecCuts.txt";
-
 int MainLoopScaleFactor = parser->GetOption<int>("MainloopScale");
 
 char FilenameRoot[400];
@@ -55,6 +53,9 @@ TreeRec->Add(FilenameRoot);
 double TofCutLow = 0.4; //No low Tof cut right now
 //double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
 
+int TRG = parser->GetOption<int>("TRG");
+string title = "FlightCuts" + to_string(TRG) + "Beta" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2) + ".txt";
+
 //I'm going to try out this new method! Try to make it easy to swap cuts in and out.
 //Prepare textile for saving values
 std::ofstream myfile;
@@ -64,11 +65,10 @@ myfile << TString::Format( "Beta High : %f", betahigh) << endl;
 myfile << TString::Format( "Beta Low : %f", betacut) << endl;
 myfile.close();
 
-int TRG = parser->GetOption<int>("TRG");
-
-const int NCuts = 8; //Start simple!
+const int NCuts = 9; //Start simple!
 string cutnames[NCuts+1] = {
     "Total NEvents ",
+    "Event satisfies trigger " + to_string(TRG) + " ",
     "Reco Total Events with Primary Track ",
     "Reco Total Events with PT found, in Beta Range ",
     "Reco PT yes, Beta Range, Single Track Events ",
@@ -79,8 +79,22 @@ string cutnames[NCuts+1] = {
     "Reco No Sides, YES UMB, CT, NO CB ",
 };
 
+const int LGNCuts = 6; //Start simple!
+string LGcutnames[LGNCuts+1] = {
+    "Total NEvents ",
+    "Event satisfies trigger " + to_string(TRG) + " ",
+    "Reco triggered LG No Sides ",
+    "Reco LG No Sides, YES UMB ",
+    "Reco LG No Sides, YES UMB, CT ",
+    "Reco LG No Sides, YES UMB, CT, YES CB ",
+    "Reco LG No Sides, YES UMB, CT, NO CB ",
+};
+
 int cuts[NCuts+1] = {};
+int LGcuts[LGNCuts+1] = {};
 cuts[0] = TreeRec->GetEntries(); //Number of events (not a cut)
+LGcuts[0] = TreeRec->GetEntries(); //Number of events (not a cut)
+
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
@@ -115,12 +129,88 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 	uint pt_index = 0;
     for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
 
+    if(( (TRG == 0) || ((int)Event->GetTriggerSources().at(0) == TRG) )){
+    cuts[1]++; //Trigger satisfied
+    LGcuts[1]++; //Trigger satisfied
+
+    int LGUMBflag = 0;
+    int LGCORflag = 0;
+    int LGCBEtopflag = 0;
+    int LGCBEbotflag = 0;
+    int LGCBEsideflag = 0;
+
+    for(unsigned int k = 0; k < Event->GetTriggerVolumeId().size(); k++){
+	    unsigned int VolumeId = Event->GetTriggerVolumeId().at(k);
+	    if(volspec(VolumeId,0,3) == 100)LGUMBflag++;
+        if(volspec(VolumeId,0,3) == 110)LGCBEtopflag++;
+        if(volspec(VolumeId,0,3) == 111)LGCBEbotflag++;
+        if(volspec(VolumeId,0,3) == 112 || volspec(VolumeId,0,3) == 113 || volspec(VolumeId,0,3) == 114 || volspec(VolumeId,0,3) == 115 || volspec(VolumeId,0,3) == 116)LGCBEsideflag++;
+        if(volspec(VolumeId,0,3) == 102 || volspec(VolumeId,0,3) == 103 || volspec(VolumeId,0,3) == 104 || volspec(VolumeId,0,3) == 105 || volspec(VolumeId,0,3) == 106)LGCORflag++;
+	}
+
+	if(LGCBEsideflag == 0 && LGCORflag == 0 ){ //No side TOF hits
+        LGcuts[2]++; //No sides
+           //cout << "No sides" << endl;
+            if(LGUMBflag > 0){
+                LGcuts[3]++; //No sides, yes UMB
+                //cout << "yes UMB " << endl;
+                if(LGCBEtopflag > 0){
+                       LGcuts[4]++; //No sides, yes UMB, yes CBEtop
+                       //cout << "yes CBE_top " << endl;
+                   if((LGCBEbotflag>0)){
+                       LGcuts[5]++; //No sides, yes UMB, yes CBEtop, yes CBEbot
+                       //cout << "yes CBot " << endl;
+                   }else{
+                       LGcuts[6]++; //No sides, yes UMB, yes CBEtop, NO CBEbot
+                       //cout << "no CBot" << endl;
+                }
+            }
+        }
+    } //No sides
+
+
     if(pt != nullptr){ //Primary track is found?
-    cuts[1]++; //PT found
+    cuts[2]++; //PT found
 
 	//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
-	if( ( (TRG == 0) || ((int)Event->GetTriggerSources().at(0) == TRG) ) && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
-	cuts[2]++; //Beta range
+	if( fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
+	cuts[3]++; //Beta range
+
+	/*    int LGUMBflag = 0;
+        int LGCORflag = 0;
+        int LGCBEtopflag = 0;
+        int LGCBEbotflag = 0;
+        int LGCBEsideflag = 0;
+
+        for(unsigned int k = 0; k < Event->GetTriggerVolumeId().size(); k++){
+         unsigned int VolumeId = Event->GetTriggerVolumeId().at(k);
+         if(volspec(VolumeId,0,3) == 100)LGUMBflag++;
+               if(volspec(VolumeId,0,3) == 110)LGCBEtopflag++;
+               if(volspec(VolumeId,0,3) == 111)LGCBEbotflag++;
+               if(volspec(VolumeId,0,3) == 112 || volspec(VolumeId,0,3) == 113 || volspec(VolumeId,0,3) == 114 || volspec(VolumeId,0,3) == 115 || volspec(VolumeId,0,3) == 116)LGCBEsideflag++;
+               if(volspec(VolumeId,0,3) == 102 || volspec(VolumeId,0,3) == 103 || volspec(VolumeId,0,3) == 104 || volspec(VolumeId,0,3) == 105 || volspec(VolumeId,0,3) == 106)LGCORflag++;
+       }
+
+       if(LGCBEsideflag == 0 && LGCORflag == 0 ){ //No side TOF hits
+               LGcuts[2]++; //No sides
+                  //cout << "No sides" << endl;
+                   if(LGUMBflag > 0){
+                       LGcuts[3]++; //No sides, yes UMB
+                       //cout << "yes UMB " << endl;
+                       if(LGCBEtopflag > 0){
+                              LGcuts[4]++; //No sides, yes UMB, yes CBEtop
+                              //cout << "yes CBE_top " << endl;
+                          if((LGCBEbotflag>0)){
+                              LGcuts[5]++; //No sides, yes UMB, yes CBEtop, yes CBEbot
+                              //cout << "yes CBot " << endl;
+                          }else{
+                              LGcuts[6]++; //No sides, yes UMB, yes CBEtop, NO CBEbot
+                              //cout << "no CBot" << endl;
+                       }
+                   }
+               }
+               } //No sides */
+
 
         int UMBflag = 0;
         int CORflag = 0;
@@ -129,7 +219,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
         int CBEsideflag = 0;
 
     if(Event->GetNTracks() == 1){
-        cuts[3]++; //ST cut
+        cuts[4]++; //ST cut
 
         //Reconstructed information, fortunately only one track.
         for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
@@ -145,17 +235,17 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
         }
 
             if(CBEsideflag == 0 && CORflag == 0 ){ //No side TOF hits
-                cuts[4]++; //No sides
+                cuts[5]++; //No sides
                 if(UMBflag > 0){
-                    cuts[5]++; //No sides, yes UMB
+                    cuts[6]++; //No sides, yes UMB
                     if(CBEtopflag > 0){
-                        cuts[6]++; //No sides, yes UMB, yes CBEtop
+                        cuts[7]++; //No sides, yes UMB, yes CBEtop
                         if((CBEbotflag>0)){
-                            cuts[7]++; //No sides, yes UMB, yes CBEtop, yes CBEbot
+                            cuts[8]++; //No sides, yes UMB, yes CBEtop, yes CBEbot
                             //cout << "Event " << i << " CBE_bot! " << endl;
                         }else{
-                            cuts[8]++; //No sides, yes UMB, yes CBEtop, NO CBEbot
-                            cout << "Event " << i << " NO CBE_bot! " << endl;
+                            cuts[9]++; //No sides, yes UMB, yes CBEtop, NO CBEbot
+                            //cout << "Event " << i << " NO CBE_bot! " << endl;
                         }
                     }
                 }
@@ -169,6 +259,8 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 
     } //Closed bracket for pt found
 
+    } //Closed bracket for trigger requirement.
+
 }  //Closed bracket for iteration through tree events, move on to the next event i
 
 myfile.open(out_path + title,std::ios::app); //Open the file for modifying
@@ -177,6 +269,14 @@ for(int k = 0; k < NCuts+1; k++){
     if(k > 0 && k!= NCuts) myfile << fixed << setprecision(2) << 100*(float)cuts[k]/(float)cuts[k-1] <<"%" <<  endl; //NEntries doesn't need to divide by anything
     if(k == NCuts) myfile << fixed << setprecision(2) << 100*(float)cuts[k]/(float)cuts[k-2] <<"%" <<  endl; //Final cut is a percentage of two above
 }
+myfile << endl;
+
+for(int k = 0; k < LGNCuts+1; k++){
+    myfile << LGcutnames[k] << LGcuts[k] << endl;
+    if(k > 0 && k!= LGNCuts) myfile << fixed << setprecision(2) << 100*(float)LGcuts[k]/(float)LGcuts[k-1] <<"%" <<  endl; //NEntries doesn't need to divide by anything
+    if(k == LGNCuts) myfile << fixed << setprecision(2) << 100*(float)LGcuts[k]/(float)LGcuts[k-2] <<"%" <<  endl; //Final cut is a percentage of two above
+}
+
 myfile.close();
 
 cout << endl << "I am done" << endl;

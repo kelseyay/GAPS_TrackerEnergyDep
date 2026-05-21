@@ -1,4 +1,7 @@
-//How to use: ./RecCutEff -i /home/kelsey/simulations/simdat/mu/v.2.1.2/mu-_gaps_triggerlevel1_FTFP_BERT_1744342800_rec -o test
+//I feel the need to look at these studies with LG hits!
+//Let's start with just reconstructed ground data.
+//DOES NOT seem like MC has trigger VID information, which makes this a little tricky, but 2025 data does!
+//How to use: ./LGCutEff -i /home/kelsey/simulations/simdat/mu/v.2.1.2/mu-_gaps_triggerlevel1_FTFP_BERT_1744342800_rec -o test
 
 using namespace std;
 
@@ -16,7 +19,6 @@ parser->AddCommandLineOption<string>("in_path", "path to instrument data files",
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
 parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.8,"l");
 parser->AddCommandLineOption<double>("beta_high", "upper Beta Cut",1,"u");
-parser->AddCommandLineOption<int>("TRG", "Which trigger?",0,"r");
 parser->AddCommandLineOption<int>("MainloopScale", "Main loop scale factor",1,"m");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
@@ -37,8 +39,6 @@ cout << "out path " << out_path << endl;
 
 if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash!" << endl; out_path = out_path + '/'; }
 
-string title = "RecCuts.txt";
-
 int MainLoopScaleFactor = parser->GetOption<int>("MainloopScale");
 
 char FilenameRoot[400];
@@ -55,6 +55,8 @@ TreeRec->Add(FilenameRoot);
 double TofCutLow = 0.4; //No low Tof cut right now
 //double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
 
+string title = "LGRecCuts.txt";
+
 //I'm going to try out this new method! Try to make it easy to swap cuts in and out.
 //Prepare textile for saving values
 std::ofstream myfile;
@@ -64,19 +66,15 @@ myfile << TString::Format( "Beta High : %f", betahigh) << endl;
 myfile << TString::Format( "Beta Low : %f", betacut) << endl;
 myfile.close();
 
-int TRG = parser->GetOption<int>("TRG");
-
-const int NCuts = 8; //Start simple!
+const int NCuts = 6; //Start simple!
 string cutnames[NCuts+1] = {
     "Total NEvents ",
-    "Reco Total Events with Primary Track ",
-    "Reco Total Events with PT found, in Beta Range ",
-    "Reco PT yes, Beta Range, Single Track Events ",
-    "Reco all above No Sides ",
-    "Reco No Sides, YES UMB ",
-    "Reco No Sides, YES UMB, CT ",
-    "Reco No Sides, YES UMB, CT, YES CB ",
-    "Reco No Sides, YES UMB, CT, NO CB ",
+    "Non-Empty Trigger VID Vector ",
+    "Reco triggered LG No Sides ",
+    "Reco LG No Sides, YES UMB ",
+    "Reco LG No Sides, YES UMB, CT ",
+    "Reco LG No Sides, YES UMB, CT, YES CB ",
+    "Reco LG No Sides, YES UMB, CT, NO CB ",
 };
 
 int cuts[NCuts+1] = {};
@@ -97,77 +95,56 @@ TreeRec->GetEntry(0);
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 
 //Using i to loop over every event in the tree
-//for(unsigned int i = 0; i < 40; i+=MainLoopScaleFactor){
+//for(unsigned int i = 0; i < 4; i+=MainLoopScaleFactor){
 //for(unsigned int i = 60500; i < 90600; i+=MainLoopScaleFactor){
 for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //This is not the "correct" way to do this, but it's probably fine. Should be skipping M each time, but that seems to be really slow!!
     TreeRec->GetEntry(i);
 
 	//Cuts are implemented in this chunk:
 
+	int UMBflag = 0;
+    int CORflag = 0;
+    int CBEtopflag = 0;
+    int CBEbotflag = 0;
+    int CBEsideflag = 0;
+
+    //cout << "Event is " << i << endl;
+
 	if( ((int)i % (int)ceil(TreeRec->GetEntries()/(MainLoopScaleFactor*10))) == 0){
 	    cout << "Event number " << i << endl;
 		cout << Event->GetActiveReconstruction() << endl;
 	}
 
-	//cout << endl << "Event number " << i << endl;
+	if(Event->GetTriggerVolumeId().size() != 0) cuts[1]++ ; //Non zero TVId value, but maybe could be > 2 or something.
 
-	CTrackRec* pt = Event->GetPrimaryTrack();
-	uint pt_index = 0;
-    for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
+	for(unsigned int k = 0; k < Event->GetTriggerVolumeId().size(); k++){
+	    unsigned int VolumeId = Event->GetTriggerVolumeId().at(k);
+	    if(volspec(VolumeId,0,3) == 100)UMBflag++;
+        if(volspec(VolumeId,0,3) == 110)CBEtopflag++;
+        if(volspec(VolumeId,0,3) == 111)CBEbotflag++;
+        if(volspec(VolumeId,0,3) == 112 || volspec(VolumeId,0,3) == 113 || volspec(VolumeId,0,3) == 114 || volspec(VolumeId,0,3) == 115 || volspec(VolumeId,0,3) == 116)CBEsideflag++;
+        if(volspec(VolumeId,0,3) == 102 || volspec(VolumeId,0,3) == 103 || volspec(VolumeId,0,3) == 104 || volspec(VolumeId,0,3) == 105 || volspec(VolumeId,0,3) == 106)CORflag++;
+	}
 
-    if(pt != nullptr){ //Primary track is found?
-    cuts[1]++; //PT found
-
-	//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
-	if( ( (TRG == 0) || ((int)Event->GetTriggerSources().at(0) == TRG) ) && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
-	cuts[2]++; //Beta range
-
-        int UMBflag = 0;
-        int CORflag = 0;
-        int CBEtopflag = 0;
-        int CBEbotflag = 0;
-        int CBEsideflag = 0;
-
-    if(Event->GetNTracks() == 1){
-        cuts[3]++; //ST cut
-
-        //Reconstructed information, fortunately only one track.
-        for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
-            unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig);
-            if(Event->GetTrack(0)->GetEnergyDeposition(isig) > TofCutLow){
-                if(volspec(VolumeId,0,3) == 100)UMBflag++;
-                if(volspec(VolumeId,0,3) == 110)CBEtopflag++;
-                if(volspec(VolumeId,0,3) == 111)CBEbotflag++;
-                if(volspec(VolumeId,0,3) == 112 || volspec(VolumeId,0,3) == 113 || volspec(VolumeId,0,3) == 114 || volspec(VolumeId,0,3) == 115 || volspec(VolumeId,0,3) == 116)CBEsideflag++;
-                if(volspec(VolumeId,0,3) == 102 || volspec(VolumeId,0,3) == 103 || volspec(VolumeId,0,3) == 104 || volspec(VolumeId,0,3) == 105 || volspec(VolumeId,0,3) == 106)CORflag++;
-            }
-            //cout << "Rec: Hit " << isig << " Edep " << Event->GetTrack(0)->GetEnergyDeposition(isig) << " at " << VolumeId << endl;
-        }
-
-            if(CBEsideflag == 0 && CORflag == 0 ){ //No side TOF hits
-                cuts[4]++; //No sides
-                if(UMBflag > 0){
-                    cuts[5]++; //No sides, yes UMB
-                    if(CBEtopflag > 0){
-                        cuts[6]++; //No sides, yes UMB, yes CBEtop
-                        if((CBEbotflag>0)){
-                            cuts[7]++; //No sides, yes UMB, yes CBEtop, yes CBEbot
-                            //cout << "Event " << i << " CBE_bot! " << endl;
-                        }else{
-                            cuts[8]++; //No sides, yes UMB, yes CBEtop, NO CBEbot
-                            cout << "Event " << i << " NO CBE_bot! " << endl;
-                        }
-                    }
+	if(CBEsideflag == 0 && CORflag == 0 ){ //No side TOF hits
+        cuts[2]++; //No sides
+        //cout << "No sides" << endl;
+            if(UMBflag > 0){
+                cuts[3]++; //No sides, yes UMB
+                //cout << "yes UMB " << endl;
+                if(CBEtopflag > 0){
+                    cuts[4]++; //No sides, yes UMB, yes CBEtop
+                        //cout << "yes CBE_top " << endl;
+                    if((CBEbotflag>0)){
+                        cuts[5]++; //No sides, yes UMB, yes CBEtop, yes CBEbot
+                        cout << "Event is " << i << " yes CBot " << endl;
+                    }else{
+                        cuts[6]++; //No sides, yes UMB, yes CBEtop, NO CBEbot
+                        cout << "Event is " << i << " no CBot" << endl;
                 }
-            } //No sides
-
-    } //Closed bracket single track reco
-
-			//-----------EVENT LEVEL CUTS END
-
-	} //Closed bracket for beta cut
-
-    } //Closed bracket for pt found
+            }
+        }
+    } //No sides
 
 }  //Closed bracket for iteration through tree events, move on to the next event i
 

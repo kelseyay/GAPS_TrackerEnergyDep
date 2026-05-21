@@ -47,6 +47,10 @@ add_executable(TellMe TellMe.cpp)
 target_include_directories(TellMe PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(TellMe ${LIB_DIRS})
 
+add_executable(SeconSearch GoodSecondariesTellMe.cpp)
+target_include_directories(SeconSearch PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(SeconSearch ${LIB_DIRS})
+
 add_executable(WriteMe WriteMe.cpp)
 target_include_directories(WriteMe PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(WriteMe ${LIB_DIRS})
@@ -123,13 +127,13 @@ add_executable(MCCutEff CutsMCEdep.cpp)
 target_include_directories(MCCutEff PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(MCCutEff ${LIB_DIRS})
 
-#add_executable(V2_MCCutEff CutsMCEdep_v2.cpp)
-#target_include_directories(V2_MCCutEff PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
-#target_link_libraries(V2_MCCutEff ${LIB_DIRS})
-
 add_executable(RecCutEff CutsRecEdep.cpp)
 target_include_directories(RecCutEff PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(RecCutEff ${LIB_DIRS})
+
+add_executable(LGCutEff LGCutsEdep.cpp)
+target_include_directories(LGCutEff PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(LGCutEff ${LIB_DIRS})
 
 add_executable(OccuOpen OpenOccu.cpp)
 target_include_directories(OccuOpen PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
@@ -170,3 +174,11 @@ target_link_libraries(BetaHisto ${LIB_DIRS})
 add_executable(OccNoCuts OccuNoCuts.cpp)
 target_include_directories(OccNoCuts PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(OccNoCuts ${LIB_DIRS})
+
+add_executable(OccLG LGOccu.cpp)
+target_include_directories(OccLG PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(OccLG ${LIB_DIRS})
+
+add_executable(FlightCuts FlightCutsEdep.cpp)
+target_include_directories(FlightCuts PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(FlightCuts ${LIB_DIRS})
