@@ -133,8 +133,10 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
     TreeGReco->GetEntry(i);
     //TreeMC->GetEntry(i);
 
-    cout << endl << "Event is " << i << endl;
-    cout << "Number of tracks " << Event->GetNTracks() << endl;
+    //cout << endl << "Event is " << i << endl;
+    //cout << "Number of tracks " << Event->GetNTracks() << endl;
+
+    //Energy deposition information for all of the tracks!
 
     for(uint t = 0; t < Event->GetNTracks(); t++){
         cout << "Track is " << t << endl;
@@ -148,11 +150,9 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
     //cout << "Event Number? " << Event->GetEventNumber() << endl; //Gviz2D is for sure pulling Event number!
     //cout << "Reconstruction used: " << Event->GetActiveReconstruction() << endl;
 
-
-
+/*
     //Searching for slowing down event in flight data.
-    /*
-    if(fabs(Event->GetPrimaryBeta()) > 0 && fabs(Event->GetPrimaryBeta()) < 0.6 && Event->GetNTracks() == 1 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -1 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -0.54){
+    if(fabs(Event->GetPrimaryBeta()) > 0.9 && fabs(Event->GetPrimaryBeta()) < 1.0 && Event->GetNTracks() == 1 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -0.75 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -0.54){
         int UMBflag = 0;
         int CORflag = 0;
         int CBEtopflag = 0;
@@ -162,12 +162,13 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
         double beta = Event->GetPrimaryBeta();
 
         //First iteration over events to check for TOF hits
-        //for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
-        for(uint isig=0; isig<Event->GetVolumeId().size(); isig++){
-            unsigned int VolumeId = Event->GetVolumeId().at(isig);
-            //unsigned int VolumeId = Event->GetTrack(0)->GetVolumeId(isig);
+        for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
+        //for(uint isig=0; isig<Event->GetVolumeId().size(); isig++){
+            //unsigned int VolumeId = Event->GetVolumeId().at(isig);
+            unsigned int VolumeId = Event->GetTrack(0)->GetVolumeId(isig);
             if(volspec(VolumeId,0,2) == 20){
-                if(GGeometryObject::GetTrackerLayer(VolumeId) < 4)tkrflag++;
+                if(GGeometryObject::GetTrackerLayer(VolumeId))tkrflag++;
+                //if(GGeometryObject::GetTrackerLayer(VolumeId) < 4)tkrflag++; //Slow-stop
             }
             if(volspec(VolumeId,0,3) == 100)UMBflag++;
             if(volspec(VolumeId,0,3) == 110){ CBEtopflag++; }
@@ -176,8 +177,23 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
             if(volspec(VolumeId,0,3) == 102 || volspec(VolumeId,0,3) == 103 || volspec(VolumeId,0,3) == 104 || volspec(VolumeId,0,3) == 105 || volspec(VolumeId,0,3) == 106)CORflag++;
         }
 
-        //if(UMBflag > 0 && CBEtopflag > 0 && CBEbotflag > 0 && tkrflag > 4 ){cout << "Event " << i << " is unbelieveably rad " << endl;}
-        if(UMBflag > 0 && CBEtopflag > 0 && CBEbotflag == 0 && tkrflag > 2 && tkrflag < 5 && CORflag == 0 && CBEsideflag == 0){
+        CTrackRec* pt = Event->GetPrimaryTrack();
+		uint pt_index = 0;
+        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
+
+        //Gr8 single track muons
+        if(UMBflag > 0 && CBEtopflag > 0 && CBEbotflag > 0 && tkrflag > 4 && (pt->GetChi2()/pt->GetNdof()) < 2){cout << "Event " << i << " is unbelieveably rad " << endl;
+            cout << "Event ID? " << Event->GetEventId() << endl;
+            cout << "Event Number? " << Event->GetEventNumber() << endl;
+            for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
+                 unsigned int VolumeId = Event->GetTrack(0)->GetVolumeId(isig);
+                 cout << "Energy deposition " << isig << " is " << Event->GetTrack(0)->GetEnergyDeposition(isig) << " at " << VolumeId << endl;
+             }
+        }
+
+
+        //Stopping particles!
+        if(UMBflag > 0 && CBEtopflag > 0 && CBEbotflag == 0 && tkrflag > 2 && tkrflag < 5 && CORflag == 0 && CBEsideflag == 0 &&  Event->GetTriggerVolumeId().size() < 3){
                 cout << "Event " << i << " is a cool stopping(?) friend " << endl;
                	for(unsigned int k = 0; k < Event->GetTriggerVolumeId().size(); k++){
                     unsigned int LGVolumeId = Event->GetTriggerVolumeId().at(k);
@@ -185,6 +201,8 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
                 }
         }
     }*/
+
+    //End stopping friend search
 
     //cout << endl << "All hits? " << endl;
 

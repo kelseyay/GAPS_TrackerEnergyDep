@@ -207,17 +207,17 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
                 if(volspec(VolumeId,0,3) == 113){ //If the hit is COR -X, fill the COR -X Occu plot
                     for(int k = 0; k < Hlen; k++){
-                        HTofCBE_min_XOccu->Fill(k,Hlen - (3*volspec(VolumeId,5,2)+8), 1/(float)Hlen);
+                        HTofCBE_min_XOccu->Fill(k,Hlen - (3*volspec(VolumeId,5,2)+8));
                     }
                 }
                 if(volspec(VolumeId,0,4) == 1162){ //If the hit is COR +X, fill the COR +X Occu plot
                     for(int k = 0; k < Hlen; k++){
-                        HTofCBE_min_XOccu->Fill(0.5, k, 1/(float)Hlen);
+                        HTofCBE_min_XOccu->Fill(0.5, k);
                     }
                 }
                 if(volspec(VolumeId,0,4) == 1163){
                     for(int k = 0; k < Hlen; k++){
-                        HTofCBE_min_XOccu->Fill(Hlen-0.5,k, 1/(float)Hlen);
+                        HTofCBE_min_XOccu->Fill(Hlen-0.5,k);
                     }
                 }
 

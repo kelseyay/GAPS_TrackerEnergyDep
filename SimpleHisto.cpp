@@ -124,7 +124,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 	//Cuts are implemented in this chunk:
 	if(Event->GetNTracks() == 1){  //First select the single track event
-		bool Umbflag = 0;
+		bool UMBflag = 0;
 		bool CBEtopflag = 0;
 		bool CBEbotflag = 0;
 
@@ -132,6 +132,8 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 		uint pt_index = 0;
       	        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
 
+        //NO CUTS
+        /*
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
 		//if(pt != nullptr && fabs(Event->GetPrimaryBetaGenerated()) >  betacut && fabs(Event->GetPrimaryBetaGenerated()) < betahigh){
 		if(pt != nullptr && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) < betahigh){
@@ -142,8 +144,26 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 			bcounts++;
 			if(GEN) HGenB->Fill(Event->GetPrimaryBetaGenerated());
 			if(GEN) HRecB_vs_GenB->Fill(Event->GetPrimaryBetaGenerated(),Event->GetPrimaryBeta());
-
 		} //Closed bracket for event level cut
+		*/
+
+		//WITH CUTS
+		if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
+
+		    for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
+                unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig); //Check the VolumeId of the event
+                if(volspec(VolumeId,0,3) == 100){ UMBflag = 1;} // cout << "UMB hit!" <<endl ;
+                if(volspec(VolumeId,0,3) == 110) {CBEtopflag = 1;}// cout << "CBE top hit!" << endl;
+                if(volspec(VolumeId,0,3) == 111) {CBEbotflag = 1;}// cout << "CBE bot hit!" << endl;
+            }
+
+			if( UMBflag && CBEtopflag && CBEbotflag && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
+			    //cout << "Good event " << i << " beta is " << Event->GetPrimaryBeta() << endl;
+				bcounts++;
+		        HBeta->Fill(Event->GetPrimaryBeta());
+			}
+
+		} //End the beta, primary, etc... cuts
 
 	} //Closed bracket for single track cut
 

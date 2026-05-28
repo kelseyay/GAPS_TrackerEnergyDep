@@ -222,7 +222,8 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
 		if(pt != nullptr &&  ( (TRG == 0) || ((int)Event->GetTriggerSources().at(0) == TRG) ) && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
-			//cout << "Event is " << i << endl;
+			cout << "Event is " << i << endl;
+			cout << "Downwards beta? " << Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] << endl;
 
 			//-----------EVENT LEVEL CUT APPLIED
 
@@ -231,7 +232,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                 if(volspec(VolumeId,0,3) == 100){ UMBflag = 1;} // cout << "UMB hit!" <<endl ;
                 if(volspec(VolumeId,0,3) == 110) {CBEtopflag = 1;}// cout << "CBE top hit!" << endl;
                 if(volspec(VolumeId,0,3) == 111) {CBEbotflag = 1;}// cout << "CBE bot hit!" << endl;
-                if(volspec(VolumeId,0,2) == 10) {OUTflag = 1;}// cout << "CBE bot hit!" << endl;
+                if(volspec(VolumeId,0,2) == 10) {OUTflag = 1;}//Outer flag
             }
 
 			if( OUTflag /*&& CBEtopflag && CBEbotflag*/ && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
