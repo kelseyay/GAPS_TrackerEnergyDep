@@ -202,9 +202,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 			cout << "Event " << i << " vertex in the tracker! Reasonable Secondary Number! Not so many Off track hits!" << endl;
 			if(SAVE){
 			    Copy_GRecoTree->Fill();
-                Copy_GRecoTree->Write();
                 Copy_RecTree->Fill();
-                Copy_RecTree->Write();
 			}
 		}
 
@@ -214,6 +212,8 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 }
 
+Copy_GRecoTree->Write();
+Copy_RecTree->Write();
 f2.Close();
 cout << endl << "I am done" << endl;
 return 1;
