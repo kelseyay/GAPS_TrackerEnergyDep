@@ -1,5 +1,5 @@
 //How to use
-// ./SeconSearch -i /home/kelsey/simulations/simdat/antip/anti_proton_gaps_triggerlevel2_FTFP_BERT_1754120716
+// ./SeconSearch -i /home/kelsey/simulations/simdat/antip/v.3.0.0/anti_proton_gaps_triggerlevel2_FTFP_BERT_1754120716
 
 using namespace std;
 
@@ -11,40 +11,10 @@ using namespace std;
 #include "GDataTrack.hh"
 #include "GDataVertex.hh"
 
-#include <TColor.h>
-#include <TProfile.h>
-#include <TMath.h>
-#include <TChain.h>
-#include <TGraph.h>
-#include <TGraphErrors.h>
-#include <TGraphAsymmErrors.h>
-#include <TLatex.h>
-#include <TMinuit.h>
-#include <vector>
-#include <map>
-#include <string>
-#include <stdlib.h>
-#include "TH1.h"
-#include "TCanvas.h"
-
 //FIXME: does this work on mac?
 #include <sys/stat.h>
 
 //#include "CRawTrk.hh"
-
-#include "CEventMc.hh"
-#include "CAnalysisManager.hh"
-#include "GAnalysisIdentification.hh"
-#include "GBasicTrigger.hh"
-#include "GSimulationParameter.hh"
-#include "GPreselection.hh"
-#include "CraneConstants.hh"
-#include "CraneLogging.hh"
-#include "GPlottingTools.hh"
-#include "CNet.hh"
-#include "CBackpropagation.hh"
-
-#include "GGeometry.hh"
 
 #ifdef USE_BOOST_PROGRAM_OPTIONS
 #include "GOptionParser.hh"
@@ -62,8 +32,11 @@ int main(int argc, char *argv[]){
 GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
+parser->AddCommandLineOption<bool>("save", "save the special events to a root file?",0,"s");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
+
+bool SAVE = parser->GetOption<bool>("save");
 
 string reco_path = parser->GetOption<string>("in_path");
 
@@ -78,12 +51,13 @@ TChain * TreeRec = new TChain("TreeRec"); //New TreeRec Tchain object (this is n
 TreeRec->SetBranchAddress("Rec", &Event); //Set the branch address using Event (defined above)
 TreeRec->Add(FilenameRoot);
 
-//Prepare Reconstruction variable:
+//Prepare FPSI Reconstruction variable for locating vertex:
 Crane::Reconstruction::TrackFit::GDataEvent * reco_data_event_ = new Crane::Reconstruction::TrackFit::GDataEvent();
 TChain * TreeGReco = new TChain("TreeGReco");
 TreeGReco->SetBranchAddress("FindPrimaryStarIterative", &reco_data_event_); //Set the branch address using Event (defined above)
 TreeGReco->Add(FilenameRoot);
 
+//Tracker center and tolerances
 double tracker_ZBaricenter = 734; //mm
 double zTolerance = 500; //mm
 double yTolerance = 600; //mm
@@ -106,6 +80,36 @@ double coslow = 1; //0.62 //0.8
 double eventbetacut = 0.2; //Cut that is applied to all events
 double betacut = 0.9; //Separation of quandrants in the beta plot
 const Int_t NBins = 50;
+
+
+//My horrible rat child: I will need to figure out how to copy the GGeometry folder in the thing!!
+//Scrub the tree clean
+TFile *f = new TFile("ky_root.root", "UPDATE");
+
+// Delete the tree from memory/disk (the ;* ensures all cycles are removed)
+f->Delete("TreeMc;*");
+f->Delete("TreeRec;*");
+f->Delete("TreeGReco;*");
+f->Delete("SimulationParameterTree;*");
+
+// Write changes and close file
+f->Write();
+f->Close();
+
+//Next need to add another event?
+
+TFile f2("ky_root.root", "update");
+TTree *Copy_GRecoTree = new TTree("TreeGReco", "GReco Tree");
+TTree *Copy_RecTree = new TTree("TreeRec", "Rec Tree");
+Copy_GRecoTree = TreeGReco->CloneTree(0);
+Copy_RecTree = TreeRec->CloneTree(0);
+
+TreeRec->GetEntry(0);
+TreeGReco->GetEntry(0);
+Copy_GRecoTree->Fill();
+Copy_GRecoTree->Write();
+Copy_RecTree->Fill();
+Copy_RecTree->Write();
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
@@ -156,7 +160,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 	for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
 
 	bool vertexIsOk_Reco = false;
-	if(fabs(Event->GetPrimaryBeta()) > 0 && fabs(Event->GetPrimaryBeta()) < 1.8 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -1 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -0.54){
+	if(fabs(Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && Event->GetPrimaryBeta()) > 0 && fabs(Event->GetPrimaryBeta()) < 1.8 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -1 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -0.54){
 
 	    //cout << "Event " << i << endl;
 	    //Check if vertex is in the tracker
@@ -167,11 +171,13 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
         }
 
 		int OffHitCtr = 0;
-		int PtrackTKR = 0; //Want events where the primary has at least one TKR hit.
-        for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
-            unsigned int VolumeId = Event->GetTrack(0)->GetVolumeId().at(isig);
+
+		//Remove this for now:
+		int PtrackTKR = 0; //Want events where the primary has at least one L1+ TKR hit.
+        for(uint isig=0; isig<Event->GetPrimaryTrack()->GetEnergyDeposition().size(); isig++){
+            unsigned int VolumeId = Event->GetPrimaryTrack()->GetVolumeId().at(isig);
             if(GGeometryObject::IsTrackerVolume(VolumeId)){
-                if(GGeometryObject::GetTrackerLayer(VolumeId) > 1) PtrackTKR++;   //Flag for lower layer hit
+                if(GGeometryObject::GetTrackerLayer(VolumeId) > 0) PtrackTKR++;   //Flag for lower layer hit
             }
         }
 
@@ -192,54 +198,23 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 		}
 
 		//This tell me was looking for really nice reconstructed events with many secondaries.
-		if(vertexIsOk_Reco && Event->GetNTracks() > 3 && Event->GetNTracks() < 7 && OffHitCtr < 4 && PtrackTKR > 1 && needthree == Event->GetNTracks() && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
+		if(vertexIsOk_Reco && Event->GetNTracks() > 4 && Event->GetNTracks() < 8 && PtrackTKR > 0 && OffHitCtr < 4 && needthree == Event->GetNTracks() && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
 			cout << "Event " << i << " vertex in the tracker! Reasonable Secondary Number! Not so many Off track hits!" << endl;
+			if(SAVE){
+			    Copy_GRecoTree->Fill();
+                Copy_GRecoTree->Write();
+                Copy_RecTree->Fill();
+                Copy_RecTree->Write();
+			}
 		}
 
 
 
 	} //End event level cuts
 
-    //Searching for slowing down event in flight data.
-    /*
-    if(fabs(Event->GetPrimaryBeta()) > 0 && fabs(Event->GetPrimaryBeta()) < 0.6 && Event->GetNTracks() == 1 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -1 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -0.54){
-        int UMBflag = 0;
-        int CORflag = 0;
-        int CBEtopflag = 0;
-        int CBEbotflag = 0;
-        int CBEsideflag = 0;
-        int tkrflag = 0;
-        double beta = Event->GetPrimaryBeta();
-
-        //First iteration over events to check for TOF hits
-        //for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
-        for(uint isig=0; isig<Event->GetVolumeId().size(); isig++){
-            unsigned int VolumeId = Event->GetVolumeId().at(isig);
-            //unsigned int VolumeId = Event->GetTrack(0)->GetVolumeId(isig);
-            if(volspec(VolumeId,0,2) == 20){
-                if(GGeometryObject::GetTrackerLayer(VolumeId) < 4)tkrflag++;
-            }
-            if(volspec(VolumeId,0,3) == 100)UMBflag++;
-            if(volspec(VolumeId,0,3) == 110){ CBEtopflag++; }
-            if(volspec(VolumeId,0,3) == 111){ CBEbotflag++;  }
-            if(volspec(VolumeId,0,3) == 112 || volspec(VolumeId,0,3) == 113 || volspec(VolumeId,0,3) == 114 || volspec(VolumeId,0,3) == 115 || volspec(VolumeId,0,3) == 116)CBEsideflag++;
-            if(volspec(VolumeId,0,3) == 102 || volspec(VolumeId,0,3) == 103 || volspec(VolumeId,0,3) == 104 || volspec(VolumeId,0,3) == 105 || volspec(VolumeId,0,3) == 106)CORflag++;
-        }
-
-        //if(UMBflag > 0 && CBEtopflag > 0 && CBEbotflag > 0 && tkrflag > 4 ){cout << "Event " << i << " is unbelieveably rad " << endl;}
-        if(UMBflag > 0 && CBEtopflag > 0 && CBEbotflag == 0 && tkrflag > 2 && tkrflag < 5 && CORflag == 0 && CBEsideflag == 0){
-                cout << "Event " << i << " is a cool stopping(?) friend " << endl;
-               	for(unsigned int k = 0; k < Event->GetTriggerVolumeId().size(); k++){
-                    unsigned int LGVolumeId = Event->GetTriggerVolumeId().at(k);
-                    cout << " LG Trigger VID " << k << ": " << LGVolumeId << endl;
-                }
-        }
-    }*/
-
-    //cout << endl << "All hits? " << endl;
-
 }
 
+f2.Close();
 cout << endl << "I am done" << endl;
 return 1;
 

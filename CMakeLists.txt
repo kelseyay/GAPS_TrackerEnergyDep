@@ -182,3 +182,7 @@ target_link_libraries(OccLG ${LIB_DIRS})
 add_executable(FlightCuts FlightCutsEdep.cpp)
 target_include_directories(FlightCuts PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(FlightCuts ${LIB_DIRS})
+
+add_executable(SaveEvents SaveEvents.cpp)
+target_include_directories(SaveEvents PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(SaveEvents ${LIB_DIRS})
