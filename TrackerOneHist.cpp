@@ -1,48 +1,9 @@
 //To use: ./OneHist -i /home/kelsey/simulations/simdat/mu/v.2.1.0/mu-_gaps_triggerlevel1_FTFP_BERT_HP_1721258929_rec -o test
+//Note: I have currently added some more cuts to make this plot without "split" hits
 
 using namespace std;
 
 #include "KYtools.C"
-
-#include <TColor.h>
-#include <TProfile.h>
-#include <TMath.h>
-#include <TChain.h>
-#include <TGraph.h>
-#include <TGraphErrors.h>
-#include <TGraphAsymmErrors.h>
-#include <TLatex.h>
-#include <TMinuit.h>
-#include <vector>
-#include <map>
-#include <string>
-#include <stdlib.h>
-#include "TH1.h"
-#include "TCanvas.h"
-
-//FIXME: does this work on mac?
-#include <sys/stat.h>
-
-//#include "CRawTrk.hh"
-
-#include "CEventMc.hh"
-#include "CAnalysisManager.hh"
-#include "GAnalysisIdentification.hh"
-#include "GBasicTrigger.hh"
-#include "GSimulationParameter.hh"
-#include "GPreselection.hh"
-#include "CraneConstants.hh"
-#include "CraneLogging.hh"
-#include "GPlottingTools.hh"
-#include "CNet.hh"
-#include "CBackpropagation.hh"
-
-#include "GGeometry.hh"
-
-#ifdef USE_BOOST_PROGRAM_OPTIONS
-#include "GOptionParser.hh"
-#include "GFileIO.hh"
-#endif
 
 using namespace Crane::Analysis;
 namespace ca = Crane::Analysis;
@@ -89,10 +50,10 @@ TreeRec->SetBranchAddress("Rec", &Event); //Set the branch address using Event (
 TreeRec->Add(FilenameRoot);
 
 int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
-double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
+double TrackerCut = 0.4; //Threshold for an energy deposition to be considered a hit
 
-double xlow = 0.3; //Low range for histogram MeV
-double xhigh = 5; //High range for histogram MeV
+double xlow = 0.2; //Low range for histogram MeV
+double xhigh = 3.5; //High range for histogram MeV
 
 double coshigh = 0.54; //0.995; //0.92 //0.54 is the highest angle that can hit UMB, CBEtop, CBEbot
 double coslow = 1; //0.62 //0.8
@@ -106,6 +67,9 @@ double mpvmax = 0.75;
 
 TH1F * hedep;
 hedep = new TH1F ("h0", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
+
+TH1F * hedep_nocuts;
+hedep_nocuts = new TH1F ("h1", ("Edep l Beta " + to_string(betacut) + " - " + to_string(betahigh) ).c_str(), NBins, xlow,xhigh);
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
@@ -126,8 +90,8 @@ TreeRec->GetEntry(0);
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 
 //Using i to loop over every event in the tree
-for(unsigned int i = 0; i < 914006; i+=MainLoopScaleFactor){
-//for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
+//for(unsigned int i = 0; i < 914006; i+=MainLoopScaleFactor){
+for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
     TreeRec->GetEntry(i);
 
 	//Cuts are implemented in this chunk:
@@ -135,6 +99,7 @@ for(unsigned int i = 0; i < 914006; i+=MainLoopScaleFactor){
 		bool Umbflag = 0;
 		bool CBEtopflag = 0;
 		bool CBEbotflag = 0;
+		int  Layer_Hits_Tracker[7] = {}; //Seven layers
 
 		if( ((int)i % (int)ceil(TreeRec->GetEntries()/10)) == 0){
 		    cout << "Event number " << i << endl;
@@ -153,19 +118,38 @@ for(unsigned int i = 0; i < 914006; i+=MainLoopScaleFactor){
 
 			for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
                 unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig); //Check the VolumeId of the event
-                if(volspec(VolumeId,0,3) == 100){ Umbflag = 1;} // cout << "UMB hit!" <<endl ;
+                if(volspec(VolumeId,0,3) == 100) { Umbflag = 1;} // cout << "UMB hit!" <<endl ;
                 if(volspec(VolumeId,0,3) == 110) {CBEtopflag = 1;}// cout << "CBE top hit!" << endl;
                 if(volspec(VolumeId,0,3) == 111) {CBEbotflag = 1;}// cout << "CBE bot hit!" << endl;
+                if(volspec(VolumeId,0,2) == 20) {
+                    int layer = GGeometryObject::GetTrackerLayer(VolumeId);
+                    Layer_Hits_Tracker[layer]++;
+                }
             }
 
-			if(/*Umbflag && CBEtopflag && CBEbotflag && */ (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
+			/*
+			for(int l=0; l<7; l++){
+			    if( Layer_Hits_Tracker[l] > 1){
+					cout << endl << "Event is " << i << endl << " Double layer hit " << l << endl;
+					for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
+				        unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig);
+						cout << "Hit is " << isig << " Edep is " << Event->GetTrack(0)->GetEnergyDeposition(isig)<< " at " << VolumeId << endl;
+					}
+				}
+			}*/
+
+			if(Umbflag && CBEtopflag && /*CBEbotflag && */ (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
 				//cout << "Event number " << i << " passes the cuts!" << endl;
 				for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
 					unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig);
 					if(GGeometryObject::IsTrackerVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TrackerCut){
-
+					    hedep_nocuts->Fill(  (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))   );
+					    int layer = GGeometryObject::GetTrackerLayer(VolumeId);
+					    int sdstrip = GGeometryObject::GetDetectorStrip(VolumeId);
+						if(sdstrip != 0 && sdstrip != 7 && Layer_Hits_Tracker[layer] < 2){
+						    //cout << "Strip hit is " << sdstrip << endl;
 							hedep->Fill(  (Event->GetTrack(0)->GetEnergyDeposition(isig)*fabs(Event->GetPrimaryMomentumDirection().CosTheta()))   );
-
+						}
 					} //Closed bracket for Tracker volume and tracker cutoff
 
 				} //Closed bracket for iteration over event with TOF cuts
@@ -189,6 +173,7 @@ for(unsigned int i = 0; i < 914006; i+=MainLoopScaleFactor){
 
 
 histplot1f("c1", hedep, "Energy Deposition All Hits Whole Tracker","Energy Deposition x Cos(theta) MeV","NEvents", out_path + "Fulltkr");
+histplot1f("c1", hedep_nocuts, "Energy Deposition All Hits Whole Tracker","Energy Deposition x Cos(theta) MeV","NEvents", out_path + "Fulltkr_nocuts");
 //Histogram for NEntries at a strip level
 
 //--------------------------------------

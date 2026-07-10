@@ -1,7 +1,7 @@
 //This plot makes a directory and puts a bunch of stuff into it
 
-//To use: ./PartsRecEdepvB -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1_FTFP_BERT_1757850432_rec -o test2 -l 0.4 -u 1 -b 12
-//Alternatively: /home/kelsey/GAPS_TrackerEnergyDep/build/PartsRecEdepvB -i /home/kelsey/simulations/simdat/ground/251204/26.01/ethernet251204_1 -l 0.55 -u 1 -b 12 -t 10
+//To use: ./PartsRecEdepvB -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1_FTFP_BERT_1757850432_rec -o test2 -r 2 -l 0.4 -u 1 -b 12
+//Alternatively: /home/kelsey/GAPS_TrackerEnergyDep/build/PartsRecEdepvB -i /home/kelsey/simulations/simdat/ground/251204/26.01/ethernet251204_1 -r 2 -l 0.55 -u 1 -b 12 -t 10
 //For flight data with track trigger:
 // ./PartsRecEdepvB -i /home/kelsey/simulations/simdat/flight/251226/26.01/starlink251226_15 -o Edep_vs_Bins/ -l 0.2 -u 1 -b 12 -r 2
 //Adding layers for TOF UMB, CBE_top, CBE_bot
@@ -85,13 +85,13 @@ cout << FilenameRoot << endl;
 
 if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash!" << endl; out_path = out_path + '/'; }
 
-string outdir = "Beta_" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2) + "Edep_vs_Bins";
+string outdir = out_path + "Beta_" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2) + "Edep_vs_Bins";
 char SaveDir[600];
 sprintf(SaveDir, "mkdir %s", outdir.c_str());
 int success = system(SaveDir);
 if (success == 0){std::cout << "Directory " << SaveDir <<" created!" << std::endl;};
 
-out_path = out_path + outdir + '/';
+out_path = outdir + '/';
 
 //Prepare Rec Event
 CEventRec* Event = new CEventRec(); //New reconstructed event
@@ -128,6 +128,7 @@ myfile << TString::Format( "Filename : %s", reco_path.c_str() )  << endl;
 myfile << TString::Format( "Beta High : %f", betahigh) << endl;
 myfile << TString::Format( "Beta Low : %f", betacut) << endl;
 myfile << TString::Format( "Beta Bins : %d", bbins) << endl;
+myfile << TString::Format( "Trigger Requirement : %d", TRG) << endl;
 myfile << "Beta = [" ; //This bracket thing should be a function!! woo
 
 //I think keeping this is fine

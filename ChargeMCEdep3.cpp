@@ -1,7 +1,5 @@
-//FIX ME TO FLOOR THE ODD NHITS!!! I goofed ;__; Kind of a small error, but non negligible for sure
-
-//How to use: ./DZedep3 -i /data1/nextcloud/cra_data/data/2025/production/v26.01/reconstructed/flight/251226/starlink251226_17 -s 0 -t 1 -f 1 -k 1 -r 2 -o test/
-//Also use: ./DZedep3 -i /home/kelsey/simulations/simdat/flight/251226/26.01/starlink251226_1 -s 0 -t 1 -f 1 -k 1 -r 2 -o test/
+//How to use: ./Zedep3 -i /data1/nextcloud/cra_data/data/2025/production/v26.01/reconstructed/flight/251226/starlink251226_17 -s 0 -t 1 -f 1 -k 1 -r 2 -o test/
+//Also use: ./Zedep3 -i /home/kelsey/simulations/simdat/flight/251226/26.01/starlink251226_1 -s 0 -t 1 -f 1 -k 1 -r 2 -o test/
 
 //This NEW AND IMPROVED script will use the MPV method for calculating Z with the truncated NHits
 

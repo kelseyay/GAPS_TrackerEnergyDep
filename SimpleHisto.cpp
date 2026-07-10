@@ -1,5 +1,7 @@
 //If you want to make a dead simple histogram of something in the Rec tree, here you go!!
 
+///home/kelsey/GAPS_TrackerEnergyDep/build/SimpleHisto -i /home/kelsey/simulations/simdat/flight/251221/v26.03/merged251221_0 -l 0.2 -u 1.8
+
 using namespace std;
 
 #include "KYtools.C"
@@ -57,6 +59,7 @@ parser->AddCommandLineOption<string>("in_path", "path to instrument data files",
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
 parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.8,"l");
 parser->AddCommandLineOption<double>("beta_high", "upper Beta Cut",1,"u");
+parser->AddCommandLineOption<int>("TRG", "Which trigger?",0,"r");
 parser->AddCommandLineOption<bool>("gen", "generated beta plots",0,"g");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
@@ -68,6 +71,7 @@ cout << reco_path << endl;
 //cout << argv[1] << endl;
 
 bool GEN = parser->GetOption<bool>("gen");
+int TRG = parser->GetOption<int>("TRG");
 
 double betacut = parser->GetOption<double>("beta_low");
 if(betacut <= 0 || betacut >=1){ betacut = 0.8; cout << "Error with low beta choice. Setting Beta low to 0.8" << endl; }
@@ -133,7 +137,6 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
       	        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
 
         //NO CUTS
-        /*
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
 		//if(pt != nullptr && fabs(Event->GetPrimaryBetaGenerated()) >  betacut && fabs(Event->GetPrimaryBetaGenerated()) < betahigh){
 		if(pt != nullptr && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) < betahigh){
@@ -145,10 +148,11 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 			if(GEN) HGenB->Fill(Event->GetPrimaryBetaGenerated());
 			if(GEN) HRecB_vs_GenB->Fill(Event->GetPrimaryBetaGenerated(),Event->GetPrimaryBeta());
 		} //Closed bracket for event level cut
-		*/
 
+
+		/*
 		//WITH CUTS
-		if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
+		if(pt != nullptr && ( (TRG == 0) || ((int)Event->GetTriggerSources().at(0) == TRG) ) && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 
 		    for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
                 unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig); //Check the VolumeId of the event
@@ -164,6 +168,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 			}
 
 		} //End the beta, primary, etc... cuts
+		*/
 
 	} //Closed bracket for single track cut
 
@@ -176,8 +181,8 @@ HBeta->SetMaximum(bcounts);
 
 //Histogram section
 //-------------------------------------
-histplot2d("c1",HRecB_vs_GenB,"Rec_B versus Gen_B","Generated Beta", "Reconstructed Beta","NEntries", out_path + "BothgenBRecB" );
-histplot1d("c2",HGenB,"Gen_B","Generated Beta","NEntries", out_path + "GenB" );
+//histplot2d("c1",HRecB_vs_GenB,"Rec_B versus Gen_B","Generated Beta", "Reconstructed Beta","NEntries", out_path + "BothgenBRecB" );
+//histplot1d("c2",HGenB,"Gen_B","Generated Beta","NEntries", out_path + "GenB" );
 histplot1d("c3",HBeta,"Rec_B","Reconstructed Beta","NEntries", out_path + "Rec_B" );
 
 cout << endl << "I am done" << endl;

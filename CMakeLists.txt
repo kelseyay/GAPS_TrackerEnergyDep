@@ -179,6 +179,10 @@ add_executable(OccNoCuts OccuNoCuts.cpp)
 target_include_directories(OccNoCuts PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(OccNoCuts ${LIB_DIRS})
 
+add_executable(HoursOccu Hour_by_Hour_Occu.cpp)
+target_include_directories(HoursOccu PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(HoursOccu ${LIB_DIRS})
+
 add_executable(OccLG LGOccu.cpp)
 target_include_directories(OccLG PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(OccLG ${LIB_DIRS})
@@ -194,3 +198,7 @@ target_link_libraries(SaveEvents ${LIB_DIRS})
 add_executable(MCEdepBeta MC_BetafromEdep.cpp)
 target_include_directories(MCEdepBeta PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(MCEdepBeta ${LIB_DIRS})
+
+add_executable(RecEdepBeta Rec_BetafromEdep.cpp)
+target_include_directories(RecEdepBeta PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(RecEdepBeta ${LIB_DIRS})

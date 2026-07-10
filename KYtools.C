@@ -19,6 +19,7 @@ using namespace std;
 #include <iomanip>
 #include <string>
 #include <sstream>
+#include "TTimeStamp.h"
 
 
 //FIXME: does this work on mac?
@@ -136,7 +137,8 @@ void histplot1f(string ctitle, TH1F* h1, string title, string xtitle, string yti
     h1->SetTitle(title.c_str());
     h1->GetXaxis()->SetTitle(xtitle.c_str());
     h1->GetYaxis()->SetTitle(ytitle.c_str());
-    h1->Draw();
+    h1->SetLineWidth(2);
+    h1->Draw("hist");
 
     gPad->SetGridx(1);
     gPad->SetGridy(1);

@@ -133,7 +133,7 @@ h2dbetaTOF[2] = new TH2F("h2dbetaTOF_CBE_bot","Energy x Cos(theta) Distribution 
 
 TH2F * h2dbetaTKR[Ntkr];
 for(int i = 0; i < Ntkr; i++){
-   h2dbetaTKR[i] = new TH2F(("h2dbetaTKR"+to_string(i)).c_str(),"Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,10);
+   h2dbetaTKR[i] = new TH2F(("h2dbetaTKR"+to_string(i)).c_str(),"Energy x Cos(theta) Distribution vs Beta" ,bbins,betacut,betahigh,NBins, xlow,5);
 }
 
 TH1F * htkr[bbins];
@@ -431,6 +431,20 @@ TGraph *errs_TOF_full = new TGraph(); //Points to plot along with the histogram.
 //Good
 //cout << "GetNBinsX histogram " <<  h2dbetaTKR->GetNbinsX() << " GetNBinsY histogram " << h2dbetaTKR->GetNbinsY() << endl;
 
+TGraph *pts_UMBExpected = new TGraph(); //Points to plot along with the histogram.
+float beta_pts_UMBExpected[8] = {0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95};
+float MPV_pts_UMBExpected[8] = {9.87, 5.55, 3.56, 2.48, 1.83, 1.41, 1.15, 1.07};
+
+pts_UMBExpected->SetMarkerStyle(22); // Set to a solid circle
+pts_UMBExpected->SetMarkerColor(kRed); // Set color to a deep blue
+pts_UMBExpected->SetMarkerSize(3); // Increase point size
+
+for(int i = 0; i < 8;i++){
+    pts_UMBExpected->SetPoint(i, beta_pts_UMBExpected[i], MPV_pts_UMBExpected[i]);
+}
+
+//int dt[4] = {3,4,1,2};
+
 label_2Dhisto(h2dbetaTKR[0], pts, errs);
 label_2Dhisto(h2dbetaTOF[0], pts_TOF, errs_TOF);
 label_2Dhisto(h2dcosTOF, cos_pts_TOF, cos_errs_TOF);
@@ -455,6 +469,29 @@ histplot2f_pts_errs("c7", h2dcosTKR_Weight,cos_pts_TKR,cos_errs_TKR,"MC True: MI
 histplot2f_pts_errs("ctof0", h2dbetaTOF[0],pts_TOF,errs_TOF,"UMB MC True: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "UMB_TOF2D_vs_Beta_MC" );
 histplot2f_pts_errs("ctof1", h2dbetaTOF[1],pts_TOF,errs_TOF,"CBE_top MC True: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "CBE_top_TOF2D_vs_Beta_MC" );
 histplot2f_pts_errs("ctof2", h2dbetaTOF[2],pts_TOF,errs_TOF,"CBE_bot MC True: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "CBE_bot_TOF2D_vs_Beta_MC" );
+
+
+TCanvas * c_exp = new TCanvas("c_exp", "c_exp", 200, 10, 900, 900);
+c_exp->SetLeftMargin(0.14);
+c_exp->SetRightMargin(0.16);
+c_exp->SetTopMargin(0.1);
+c_exp->SetBottomMargin(0.1);
+
+h2dbetaTOF[0]->SetTitle("UMB MC True: TOF Energy x Sin/Cos(theta) Distribution vs Beta");
+h2dbetaTOF[0]->SetBit(TH1::kNoStats);
+h2dbetaTOF[0]->GetXaxis()->SetTitle("Beta");
+h2dbetaTOF[0]->GetYaxis()->SetTitle("Angle Corrected Energy");
+h2dbetaTOF[0]->GetZaxis()->SetTitle("NEntries");
+
+h2dbetaTOF[0]->Draw("COLZ");
+pts_TOF->Draw("P same");
+errs_TOF->Draw("P same");
+pts_UMBExpected->Draw("P same");
+gPad->SetLogz();
+
+char histname[400];
+sprintf(histname, "%s.png",(out_path + "UMB_TOF2D_vs_Beta_MC_Extra_Labels").c_str());
+c_exp->SaveAs(histname);
 
 
 myfile << "EdepTKR = [" ;

@@ -1,4 +1,10 @@
 //Pretty simple Beta histograms (work for MC and ground/flight data both.)
+//This should be combined with BetaNoCuts, and no cuts should just be a parameter in the executable, like -c 0 or -c 1 for cuts vs no cuts.
+//Yeah let me go ahead and fix that next iteration.
+
+//How to use:
+// /home/kelsey/GAPS_TrackerEnergyDep/build/BetaHisto -i /home/kelsey/simulations/simdat/flight/251221/v26.03/merged251221_0 -l 0.2 -u 1.8 -r 2
+
 using namespace std;
 
 #include "KYtools.C"
@@ -57,6 +63,7 @@ parser->AddCommandLineOption<string>("out_file", "name of output root file", "",
 parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.8,"l");
 parser->AddCommandLineOption<double>("beta_high", "upper Beta Cut",1,"u");
 parser->AddCommandLineOption<bool>("gen", "generated beta plots",0,"g");
+parser->AddCommandLineOption<int>("TRG", "Which trigger?",0,"r");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
@@ -67,6 +74,7 @@ cout << reco_path << endl;
 //cout << argv[1] << endl;
 
 bool GEN = parser->GetOption<bool>("gen");
+int TRG = parser->GetOption<int>("TRG");
 
 double betacut = parser->GetOption<double>("beta_low");
 if(betacut <= 0 || betacut >=1){ betacut = 0.8; cout << "Error with low beta choice. Setting Beta low to 0.8" << endl; }
@@ -101,11 +109,13 @@ char text[400]; //This variable is used later to name the plots
 
 //What histogram would you like to plot here!!
 TH1D * HBeta = Plotting.DefineTH1D("HBeta",20, betacut, betahigh, "Reconstructed Beta", "entries", 10, 100000);
+TH1D * HBeta_NoTOFCuts = Plotting.DefineTH1D("HBeta_NoTOFCuts",20, betacut, betahigh, "Reconstructed Beta", "entries", 10, 100000);
 //Reconstructed beta vs generated beta for MC!
 TH1D * HGenB = Plotting.DefineTH1D("HGenB",20, betacut, 1, "Generated Beta", "entries", 10, 100000);
 TH2D * HRecB_vs_GenB= new TH2D("HRecB_vs_GenB","Rec_B vs Gen_Beta",50, betacut, 1,50, 0.1,1.5);
 
 int bcounts = 0;
+int bcounts_noTOF = 0;
 
 //How many entries:
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
@@ -136,8 +146,10 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
 		//if(pt != nullptr && fabs(Event->GetPrimaryBetaGenerated()) >  betacut && fabs(Event->GetPrimaryBetaGenerated()) < betahigh){
 		//if(pt != nullptr && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) < betahigh){
-		if(pt != nullptr && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
+		if(pt != nullptr && (pt->GetChi2()/pt->GetNdof()) < 3.2 && ( (TRG == 0) || ((int)Event->GetTriggerSources().at(0) == TRG) ) && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 
+		HBeta_NoTOFCuts->Fill(Event->GetPrimaryBeta());
+		bcounts_noTOF++;
 
         //Reconstructed information, fortunately only one track.
         for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
@@ -152,7 +164,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
             //cout << "Rec: Hit " << isig << " Edep " << Event->GetTrack(0)->GetEnergyDeposition(isig) << " at " << VolumeId << endl;
         }
 
-        if(UMBflag > 0 && CBEtopflag > 0 && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
+        if(UMBflag > 0 && CBEtopflag > 0 && CBEbotflag > 0 ){
 			HBeta->Fill(Event->GetPrimaryBeta());
 			bcounts++;
 			if(GEN) HGenB->Fill(Event->GetPrimaryBetaGenerated());
@@ -167,14 +179,16 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 cout << bcounts << endl;
 HBeta->SetMaximum(bcounts);
+HBeta_NoTOFCuts->SetMaximum(bcounts_noTOF);
 
 //HGenB->Scale(1.0 / HGenB->Integral(), "width");
 
 //Histogram section
 //-------------------------------------
-histplot2d("c1",HRecB_vs_GenB,"Rec_B versus Gen_B","Generated Beta", "Reconstructed Beta","NEntries", out_path + "Cuts_BothgenBRecB" );
-histplot1d("c2",HGenB,"Gen_B","Generated Beta","NEntries", out_path + "Cuts_GenB" );
-histplot1d("c3",HBeta,"Rec_B","Reconstructed Beta","NEntries", out_path + "Cuts_Rec_B" );
+if(GEN) histplot2d("c1",HRecB_vs_GenB,"Rec_B versus Gen_B","Generated Beta", "Reconstructed Beta","NEntries", out_path + "Cuts_BothgenBRecB_TRG" + to_string(TRG) );
+if(GEN) histplot1d("c2",HGenB,"Gen_B","Generated Beta","NEntries", out_path + "Cuts_GenB_TRG" + to_string(TRG) );
+histplot1d("c3",HBeta,"Reconstructed B","Reconstructed Beta","NEntries", out_path + "Cuts_Rec_B_TRG" + to_string(TRG) );
+histplot1d("c4",HBeta_NoTOFCuts,"Reconstructed B No TOF Cuts","Reconstructed Beta","NEntries", out_path + "NoTofCuts_Rec_B_TRG" + to_string(TRG) );
 
 cout << endl << "I am done" << endl;
 

@@ -9,6 +9,22 @@ namespace ca = Crane::Analysis;
 namespace cl = Crane::Common;
 //using Crane::Calibration;
 
+void format_hist2d(TH2D* h1, string title, string xtitle, string ytitle, string ztitle){
+        h1->SetTitle(title.c_str());
+        h1->GetXaxis()->SetTitle(xtitle.c_str());
+        h1->GetYaxis()->SetTitle(ytitle.c_str());
+        h1->GetZaxis()->SetTitle(ztitle.c_str());
+        gPad->SetLogz();
+}
+
+void format_hist2f(TH2F* h1, string title, string xtitle, string ytitle, string ztitle){
+        h1->SetTitle(title.c_str());
+        h1->GetXaxis()->SetTitle(xtitle.c_str());
+        h1->GetYaxis()->SetTitle(ytitle.c_str());
+        h1->GetZaxis()->SetTitle(ztitle.c_str());
+        gPad->SetLogz();
+}
+
 void format_pad(TCanvas * c1, int i){
     c1->GetPad(i)->cd();
     c1->GetPad(i)->SetLeftMargin(0.14);
@@ -89,7 +105,6 @@ TH2D* HTofCBE_min_XOccu = Plotting.DefineTH2D("HTofCBE_min_XOccu", 20, -800, 800
 TH2D* HTofCBE_YOccu = Plotting.DefineTH2D("HTofCBE_YOccu", 20, -800, 800, 36, -120, 1300,  "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
 TH2D* HTofCBE_min_YOccu = Plotting.DefineTH2D("HTofCBE_min_YOccu", 20, -800, 800, 36, -120, 1300,  "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
 
-
 //auto hcol21 = new TH2F("hcol21","MPV Full Tracker",nrows*nstrips,0,nrows*nstrips,nlayers*nmods,0,nlayers*nmods);
 auto hnentries = new TH2F("hnentries","Full Tracker Strip-Level NHits",nrows*nstrips,0,nrows*nstrips,nlayers*nmods,0,nlayers*nmods);
 
@@ -102,17 +117,131 @@ myfile.close();
 
 //Now we can go over the loop
 TreeRec->GetEntry(0);
+TTimeStamp T(Event->GetEventTime());
+cout << "First event time " << Event->GetEventTime() << endl;
+cout << "First event time formatted " << T.AsString("s") << endl;
+string time_previous = T.AsString("s");
 
+TreeRec->GetEntry(TreeRec->GetEntries()-1);
+TTimeStamp T2(Event->GetEventTime());
+//T = Event->GetEventTime();
+cout << "Last event time " << Event->GetEventTime() << endl;
+cout << "Last event time formatted " << T2.AsString("s") << endl;
+
+int nhours = floor( (T2-T) / 3600);
+int hour_flag = 0; //When this flag gets tripped, hour_flag++, wait for the next hour before saving all of the variables.
+
+cout << "Number of hours " << nhours << endl;
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
+
+TCanvas * c_flat[nhours+1];
+TCanvas * c_sides[nhours+1];
+
+TString oo = out_path+pfx+"_HG_Occu_Hour_by_Hour.pdf";
 
 //Using i to loop over every event in the tree
 //for(unsigned int i = 0; i < 100; i+=MainLoopScaleFactor){
 for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
         TreeRec->GetEntry(i);
+        T2 = Event->GetEventTime();
+        int Hour = floor( (T2-T) / 3600);
 
         if( ((int)i % (int)ceil(TreeRec->GetEntries()/10) == 0) ){
 		    cout << "Event number " << i << endl;
 		}
+
+        if(Hour != hour_flag){
+            cout << "hour_flag " << hour_flag << endl;
+            string time_thisstep = T2.AsString("s");
+            string time = time_previous + " to " + time_thisstep.substr(time_thisstep.length() - 8);
+            time_previous = time_thisstep;
+            cout << time << endl;
+
+            HTofUMBOccu->SetMaximum(HTofUMBOccu->GetEntries()/1000);
+            HTofCBEtopOccu->SetMaximum(HTofCBEtopOccu->GetEntries()/100);
+            HTofCBEbotOccu->SetMaximum(HTofCBEbotOccu->GetEntries()/100);
+            HTofCOR_XOccu->SetMaximum(HTofCOR_XOccu->GetEntries()/100);
+            HTofCOR_min_XOccu->SetMaximum(HTofCOR_min_XOccu->GetEntries()/100);
+            HTofCOR_YOccu->SetMaximum(HTofCOR_YOccu->GetEntries()/100);
+            HTofCOR_min_YOccu->SetMaximum(HTofCOR_min_YOccu->GetEntries()/100);
+            HTofCBE_XOccu->SetMaximum(HTofCBE_XOccu->GetEntries()/100);
+            HTofCBE_min_XOccu->SetMaximum(HTofCBE_min_XOccu->GetEntries()/100);
+            HTofCBE_YOccu->SetMaximum(HTofCBE_YOccu->GetEntries()/100);
+            HTofCBE_min_YOccu->SetMaximum(HTofCBE_min_YOccu->GetEntries()/100);
+
+            histplot2f("ctkr"+to_string(hour_flag),hnentries,"Tracker " + time,"row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries",out_path+pfx+"TrackerEntries");
+            histplot2d("cumb"+to_string(hour_flag),HTofUMBOccu,"UMB " + time,"X Location [cm]","Y Location [cm]","NEntries",out_path+pfx+"TofUmbOccu"+T2.AsString("s"));
+            histplot2d("ccbetop"+to_string(hour_flag),HTofCBEtopOccu,"CBEtop " + time,"X Location [cm]","Y Location [cm]","NEntries",out_path+pfx+"TofCBEtopOccu"+T2.AsString("s"));
+            histplot2d("ccbebot"+to_string(hour_flag),HTofCBEbotOccu,"CBEbot " + time,"X Location [cm]","Y Location [cm]","NEntries",out_path+pfx+"TofCBEbotOccu"+T2.AsString("s"));
+            histplot2d("ccorx"+to_string(hour_flag),HTofCOR_XOccu,"COR +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_XOccu"+T2.AsString("s"));
+            histplot2d("ccormx"+to_string(hour_flag),HTofCOR_min_XOccu,"COR -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_min_XOccu"+T2.AsString("s"));
+            histplot2d("ccory"+to_string(hour_flag),HTofCOR_YOccu,"COR +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_YOccu"+T2.AsString("s"));
+            histplot2d("ccormy"+to_string(hour_flag),HTofCOR_min_YOccu,"COR -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_min_YOccu"+T2.AsString("s"));
+
+            histplot2d("ccbex"+to_string(hour_flag),HTofCBE_XOccu,"CBE +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_XOccu"+T2.AsString("s"));
+            histplot2d("ccbemx"+to_string(hour_flag),HTofCBE_min_XOccu,"CBE -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_min_XOccu"+T2.AsString("s"));
+            histplot2d("ccbey"+to_string(hour_flag),HTofCBE_YOccu,"CBE +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_YOccu"+T2.AsString("s"));
+            histplot2d("ccbemy"+to_string(hour_flag),HTofCBE_min_YOccu,"CBE -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_min_YOccu"+T2.AsString("s"));
+
+            //format_hist2f(hnentries,"Full Tracker Strip Level NHits","row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries");
+
+            //new TCanvas(Form("c%d", i), Form("Canvas %d", i), 200 + i*50, 200 + i*50, 600, 400);
+            c_flat[hour_flag] = new TCanvas(Form("c_flat%d", hour_flag),Form("UMB CBEtop CBEbot TKR%d", hour_flag),600,600); //Four flat structures on one canvas
+            c_sides[hour_flag] = new TCanvas(Form("c_sides%d", hour_flag),Form("COR CBE sides%d", hour_flag),1200,600); //Side TOF panels take up 8 (4x2) pieces of one canvas
+
+
+            c_flat[hour_flag]->cd();
+            c_flat[hour_flag]->Divide(2,2);
+
+            format_pad(c_flat[hour_flag],1);
+            HTofUMBOccu->Draw("COLZ");
+            format_pad(c_flat[hour_flag],2);
+            hnentries->Draw("COLZ");
+            format_pad(c_flat[hour_flag],3);
+            HTofCBEtopOccu->Draw("COLZ");
+            format_pad(c_flat[hour_flag],4);
+            HTofCBEbotOccu->Draw("COLZ");
+
+            c_sides[hour_flag]->cd();
+            c_sides[hour_flag]->Divide(4,2);
+
+            format_pad(c_sides[hour_flag],1);
+            HTofCOR_XOccu->Draw("COLZ");
+            format_pad(c_sides[hour_flag],2);
+            HTofCOR_min_XOccu->Draw("COLZ");
+
+            format_pad(c_sides[hour_flag],3);
+            HTofCOR_YOccu->Draw("COLZ");
+            format_pad(c_sides[hour_flag],4);
+            HTofCOR_min_YOccu->Draw("COLZ");
+            format_pad(c_sides[hour_flag],5);
+            HTofCBE_XOccu->Draw("COLZ");
+            format_pad(c_sides[hour_flag],6);
+            HTofCBE_min_XOccu->Draw("COLZ");
+            format_pad(c_sides[hour_flag],7);
+            HTofCBE_YOccu->Draw("COLZ");
+            format_pad(c_sides[hour_flag],8);
+            HTofCBE_min_YOccu->Draw("COLZ");
+
+            if(hour_flag == 0){c_flat[hour_flag]->Print(Form("%s[",oo.Data())); c_flat[hour_flag]->Print(Form("%s",oo.Data())); c_sides[hour_flag]->Print(Form("%s",oo.Data()));
+            }else{c_flat[hour_flag]->Print(Form("%s",oo.Data()));c_sides[hour_flag]->Print(Form("%s",oo.Data()));}
+
+            HTofUMBOccu->Reset("ICESM");
+            hnentries->Reset("ICESM");
+            HTofCBEtopOccu->Reset("ICESM");
+            HTofCBEbotOccu->Reset("ICESM");
+            HTofCOR_XOccu->Reset("ICESM");
+            HTofCOR_min_XOccu->Reset("ICESM");
+            HTofCOR_YOccu->Reset("ICESM");
+            HTofCOR_min_YOccu->Reset("ICESM");
+            HTofCBE_XOccu->Reset("ICESM");
+            HTofCBE_min_XOccu->Reset("ICESM");
+            HTofCBE_YOccu->Reset("ICESM");
+            HTofCBE_min_YOccu->Reset("ICESM");
+
+            hour_flag++;
+
+        }
 
         //cout << "Event is " << i << endl;
 
@@ -228,81 +357,83 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 }
 
-//void histplot2d(string ctitle, TH2D* h1, string title, string xtitle, string ytitle, string ztitle, string savename){
 
 
-//Save all histograms so they can be reopened.
-//HTofUMBOccu->SaveAs( (out_path + "HTofUMBOccu.root").c_str() );
-//HTofCBEtopOccu->SaveAs( (out_path + "HTofCBEtopOccu.root").c_str() );
-//HTofCBEbotOccu->SaveAs( (out_path + "HTofCBEbotOccu.root").c_str() );
-//hnentries->SaveAs( (out_path + "NhitsTracker.root").c_str() );
-//histplot2d("ctest",HTofCBEtopOccu_test,"CBE Bot LG Occupancy Plot","CBE Bot Panel X Span","CBE Bot Panel Y Span","NEntries",out_path+"LGTofCBEbotOccu");
+TreeRec->GetEntry(TreeRec->GetEntries()-1);
+T2 = Event->GetEventTime();
 
-histplot2d("c1",HTofUMBOccu,"Umbrella Occupancy Plot","X Location Umb Hit","Y Location Umb Hit","NEntries",out_path+pfx+"TofUmbOccu");
-histplot2d("c2",HTofCBEtopOccu,"CBE Top Occupancy Plot","X Location Umb Hit","Y Location Umb Hit","NEntries",out_path+pfx+"TofCBEtopOccu");
-histplot2d("c3",HTofCBEbotOccu,"CBE Bot Occupancy Plot","X Location Umb Hit","Y Location Umb Hit","NEntries",out_path+pfx+"TofCBEbotOccu");
-histplot2d("c4",HTofCOR_XOccu,"COR +X Occupancy Plot","Y Location Umb Hit","Z Location Umb Hit","NEntries",out_path+pfx+"TofCOR_XOccu");
-histplot2d("c5",HTofCOR_min_XOccu,"COR -X Occupancy Plot","Y Location Umb Hit","Z Location Umb Hit","NEntries",out_path+pfx+"TofCOR_min_XOccu");
-histplot2d("c6",HTofCOR_YOccu,"COR +Y Occupancy Plot","X Location Umb Hit","Z Location Umb Hit","NEntries",out_path+pfx+"TofCOR_YOccu");
-histplot2d("c7",HTofCOR_min_YOccu,"COR -Y Occupancy Plot","X Location Umb Hit","Z Location Umb Hit","NEntries",out_path+pfx+"TofCOR_min_YOccu");
+string time_thisstep = T2.AsString("s");
+string time = time_previous + " to " + time_thisstep.substr(time_thisstep.length() - 8);
 
-histplot2d("c8",HTofCBE_XOccu,"CBE +X Occupancy Plot","Y Location Umb Hit","Z Location Umb Hit","NEntries",out_path+pfx+"TofCBE_XOccu");
-histplot2d("c5",HTofCBE_min_XOccu,"CBE -X Occupancy Plot","Y Location Umb Hit","Z Location Umb Hit","NEntries",out_path+pfx+"TofCBE_min_XOccu");
-histplot2d("c6",HTofCBE_YOccu,"CBE +Y Occupancy Plot","X Location Umb Hit","Z Location Umb Hit","NEntries",out_path+pfx+"TofCBE_YOccu");
-histplot2d("c7",HTofCBE_min_YOccu,"CBE -Y Occupancy Plot","X Location Umb Hit","Z Location Umb Hit","NEntries",out_path+pfx+"TofCBE_min_YOccu");
+HTofUMBOccu->SetMaximum(HTofUMBOccu->GetEntries()/1000);
+HTofCBEtopOccu->SetMaximum(HTofCBEtopOccu->GetEntries()/100);
+HTofCBEbotOccu->SetMaximum(HTofCBEbotOccu->GetEntries()/100);
+HTofCOR_XOccu->SetMaximum(HTofCOR_XOccu->GetEntries()/100);
+HTofCOR_min_XOccu->SetMaximum(HTofCOR_min_XOccu->GetEntries()/100);
+HTofCOR_YOccu->SetMaximum(HTofCOR_YOccu->GetEntries()/100);
+HTofCOR_min_YOccu->SetMaximum(HTofCOR_min_YOccu->GetEntries()/100);
+HTofCBE_XOccu->SetMaximum(HTofCBE_XOccu->GetEntries()/100);
+HTofCBE_min_XOccu->SetMaximum(HTofCBE_min_XOccu->GetEntries()/100);
+HTofCBE_YOccu->SetMaximum(HTofCBE_YOccu->GetEntries()/100);
+HTofCBE_min_YOccu->SetMaximum(HTofCBE_min_YOccu->GetEntries()/100);
 
-histplot2f("ctkr",hnentries,"Full Tracker Strip Level NHits","row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries",out_path+pfx+"TrackerEntries");
+cout << time << endl;
+histplot2f("ctkr"+to_string(nhours),hnentries,"Tracker " + time,"row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries",out_path+pfx+"TrackerEntries");
+histplot2d("cumb"+to_string(nhours),HTofUMBOccu,"UMB " + time,"X Location [cm]","Y Location [cm]","NEntries",out_path+pfx+"TofUmbOccu"+T2.AsString("s"));
+histplot2d("ccbetop"+to_string(nhours),HTofCBEtopOccu,"CBEtop " + time,"X Location [cm]","Y Location [cm]","NEntries",out_path+pfx+"TofCBEtopOccu"+T2.AsString("s"));
+histplot2d("ccbebot"+to_string(nhours),HTofCBEbotOccu,"CBEbot " + time,"X Location [cm]","Y Location [cm]","NEntries",out_path+pfx+"TofCBEbotOccu"+T2.AsString("s"));
+histplot2d("ccorx"+to_string(nhours),HTofCOR_XOccu,"COR +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_XOccu"+T2.AsString("s"));
+histplot2d("ccormx"+to_string(nhours),HTofCOR_min_XOccu,"COR -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_min_XOccu"+T2.AsString("s"));
+histplot2d("ccory"+to_string(nhours),HTofCOR_YOccu,"COR +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_YOccu"+T2.AsString("s"));
+histplot2d("ccormy"+to_string(nhours),HTofCOR_min_YOccu,"COR -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_min_YOccu"+T2.AsString("s"));
 
-//Add section where histograms are added to a pdf. Hopefully the function's inner workings (axis labels, titles, etc...) remain for this!
+histplot2d("ccbex"+to_string(nhours),HTofCBE_XOccu,"CBE +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_XOccu"+T2.AsString("s"));
+histplot2d("ccbemx"+to_string(nhours),HTofCBE_min_XOccu,"CBE -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_min_XOccu"+T2.AsString("s"));
+histplot2d("ccbey"+to_string(nhours),HTofCBE_YOccu,"CBE +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_YOccu"+T2.AsString("s"));
+histplot2d("ccbemy"+to_string(nhours),HTofCBE_min_YOccu,"CBE -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_min_YOccu"+T2.AsString("s"));
 
-vector<TCanvas*> vca; //Canvas vector for a larger pdf structure
-TCanvas *c_flat = new TCanvas("c_flat","UMB CBEtop CBEbot TKR",600,600); //Four flat structures on one canvas
-TCanvas *c_sides = new TCanvas("c_sides","COR CBEsides",1200,600); //Side TOF panels take up 8 (4x2) pieces of one canvas
+//format_hist2f(hnentries,"Full Tracker Strip Level NHits","row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries");
 
-c_flat->cd();
-c_flat->Divide(2,2);
-format_pad(c_flat,1);
+//new TCanvas(Form("c%d", i), Form("Canvas %d", i), 200 + i*50, 200 + i*50, 600, 400);
+c_flat[nhours] = new TCanvas(Form("c_flat%d", nhours),Form("UMB CBEtop CBEbot TKR%d", nhours),600,600); //Four flat structures on one canvas
+c_sides[nhours] = new TCanvas(Form("c_sides%d", nhours),Form("COR CBE sides%d", nhours),1200,600); //Side TOF panels take up 8 (4x2) pieces of one canvas
+
+
+c_flat[nhours]->cd();
+c_flat[nhours]->Divide(2,2);
+
+format_pad(c_flat[nhours],1);
 HTofUMBOccu->Draw("COLZ");
-format_pad(c_flat,2);
+format_pad(c_flat[nhours],2);
 hnentries->Draw("COLZ");
-format_pad(c_flat,3);
+format_pad(c_flat[nhours],3);
 HTofCBEtopOccu->Draw("COLZ");
-format_pad(c_flat,4);
+format_pad(c_flat[nhours],4);
 HTofCBEbotOccu->Draw("COLZ");
-vca.push_back(c_flat);
 
-c_sides->cd();
-c_sides->Divide(4,2);
-format_pad(c_sides,1);
+c_sides[nhours]->cd();
+c_sides[nhours]->Divide(4,2);
+
+format_pad(c_sides[nhours],1);
 HTofCOR_XOccu->Draw("COLZ");
-format_pad(c_sides,2);
+format_pad(c_sides[nhours],2);
 HTofCOR_min_XOccu->Draw("COLZ");
-format_pad(c_sides,3);
+
+format_pad(c_sides[nhours],3);
 HTofCOR_YOccu->Draw("COLZ");
-format_pad(c_sides,4);
+format_pad(c_sides[nhours],4);
 HTofCOR_min_YOccu->Draw("COLZ");
-format_pad(c_sides,5);
+format_pad(c_sides[nhours],5);
 HTofCBE_XOccu->Draw("COLZ");
-format_pad(c_sides,6);
+format_pad(c_sides[nhours],6);
 HTofCBE_min_XOccu->Draw("COLZ");
-format_pad(c_sides,7);
+format_pad(c_sides[nhours],7);
 HTofCBE_YOccu->Draw("COLZ");
-format_pad(c_sides,8);
+format_pad(c_sides[nhours],8);
 HTofCBE_min_YOccu->Draw("COLZ");
 
-vca.push_back(c_sides);
-
-TString oo = out_path+pfx+"_HG_Occu.pdf";
-for(int ic=0;ic<vca.size(); ic++){
-    if     (ic==0)             {
-      vca[ic]->Print(Form("%s[",oo.Data()));
-      vca[ic]->Print(Form("%s",oo.Data()));
-    }else if(ic==vca.size()-1 ){
-      vca[ic]->Print(Form("%s",oo.Data()));
-      vca[ic]->Print(Form("%s]",oo.Data()));
-    }else
-      vca[ic]->Print(Form("%s",oo.Data()));
-}
+//Last histogram in the pdf
+c_flat[nhours]->Print(Form("%s",oo.Data())); c_sides[nhours]->Print(Form("%s",oo.Data())); c_flat[nhours]->Print(Form("%s]",oo.Data()));
 
 myfile.close();
 

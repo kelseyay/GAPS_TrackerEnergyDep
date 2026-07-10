@@ -1,5 +1,8 @@
+//Hello, I am a sad piece of code that exists because I needed to do something in one day and couldn't figure out how to copy everything
+//Oh noooooo
+//Use this on the reconstructed files. Eventually figure out how to merge me with the other code and get rid of me.
 //How to use
-// ./SeconSearch -i /home/kelsey/simulations/simdat/antip/v.3.0.0/anti_proton_gaps_triggerlevel2_FTFP_BERT_1754120716
+// ./RecSeconSearch -i /home/kelsey/simulations/simdat/antip/v.3.0.0/anti_proton_gaps_triggerlevel2_FTFP_BERT_1754120716
 
 using namespace std;
 
@@ -10,6 +13,16 @@ using namespace std;
 #include "GDataPoint.hh"
 #include "GDataTrack.hh"
 #include "GDataVertex.hh"
+
+//FIXME: does this work on mac?
+#include <sys/stat.h>
+
+//#include "CRawTrk.hh"
+
+#ifdef USE_BOOST_PROGRAM_OPTIONS
+#include "GOptionParser.hh"
+#include "GFileIO.hh"
+#endif
 
 using namespace Crane::Analysis;
 namespace ca = Crane::Analysis;
@@ -53,7 +66,7 @@ double zTolerance = 500; //mm
 double yTolerance = 600; //mm
 
 //Reconstructed root file
-//TFile *f_template = new TFile("/home/kelsey/simulations/simdat/flight/251221/FPSI/starlink251221_0003_FindPrimaryStarIterative_rec.root", "READ");
+TFile *f_template = new TFile("/home/kelsey/simulations/simdat/flight/251221/FPSI/starlink251221_0003_FindPrimaryStarIterative_rec.root", "READ");
 
 
 /*
@@ -78,13 +91,11 @@ const Int_t NBins = 50;
 
 //My horrible rat child: I will need to figure out how to copy the GGeometry folder in the thing!!
 //Scrub the tree clean
-TFile *f = new TFile("ky_root_MC_hebar.root", "UPDATE");
+TFile *f = new TFile("ky_root_Rec.root", "UPDATE");
 
 // Delete the tree from memory/disk (the ;* ensures all cycles are removed)
-f->Delete("TreeMc;*");
 f->Delete("TreeRec;*");
 f->Delete("TreeGReco;*");
-f->Delete("SimulationParameterTree;*");
 
 // Write changes and close file
 f->Write();
@@ -92,7 +103,7 @@ f->Close();
 
 //Next need to add another event?
 
-TFile f2("ky_root_MC_hebar.root", "update");
+TFile f2("ky_root_Rec.root", "update");
 //TFile f2("ky_root_Rec.root", "update");
 
 TTree *Copy_GRecoTree = new TTree("TreeGReco", "GReco Tree");
@@ -194,7 +205,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 		}
 
 		//This tell me was looking for really nice reconstructed events with many secondaries.
-		if(vertexIsOk_Reco && Event->GetNTracks() > 7 && Event->GetNTracks() < 13 && PtrackTKR > 0 && OffHitCtr < 6 /*&& needthree == Event->GetNTracks()*/ && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
+		if(vertexIsOk_Reco && Event->GetNTracks() > 6 && Event->GetNTracks() < 9 /*&& PtrackTKR > 0*/ && OffHitCtr < 4 && needthree == Event->GetNTracks() && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
 			cout << "Event " << i << " vertex in the tracker! Reasonable Secondary Number! Not so many Off track hits!" << endl;
 			if(SAVE){
 			    Copy_GRecoTree->Fill();

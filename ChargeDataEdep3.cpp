@@ -1,5 +1,6 @@
 //HEY YOU NEED TO FIX THE TRUNCATED MEAN!!!
 //SHOULD BE TAKING THE LOWER HALF OF FLOOR(N) HITS!!!
+//Doing this lower-biases the results, so maybe we skip this for now until it's clear how to deal with adjacent strip hits.
 
 //How to use: ./DZedep3 -i /data1/nextcloud/cra_data/data/2025/production/v26.01/reconstructed/flight/251226/starlink251226_17 -s 0 -t 1 -f 1 -k 1 -r 2 -o test/
 //Also use: ./DZedep3 -i /home/kelsey/simulations/simdat/flight/251226/26.01/starlink251226_1 -s 0 -t 1 -f 1 -k 1 -r 2 -o test/
@@ -157,7 +158,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 //for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //This is not the "correct" way to do this, but it's probably fine. Should be skipping M each time, but that seems to be really slow!!
     TreeRec->GetEntry(i);
 
-    if( ((int)i % (int)ceil(TreeRec->GetEntries()/(MainLoopScaleFactor*10))) == 0){
+    if( ((int)i % (int)ceil(TreeRec->GetEntries()/(MainLoopScaleFactor))) == 0){
 		    cout << "Event number " << i << endl;
 	}
 

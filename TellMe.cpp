@@ -1,3 +1,5 @@
+//Maybe write in some options so you can ask what to tell me lol
+
 using namespace std;
 
 #include "KYtools.C"
@@ -7,46 +9,6 @@ using namespace std;
 #include "GDataPoint.hh"
 #include "GDataTrack.hh"
 #include "GDataVertex.hh"
-
-#include <TColor.h>
-#include <TProfile.h>
-#include <TMath.h>
-#include <TChain.h>
-#include <TGraph.h>
-#include <TGraphErrors.h>
-#include <TGraphAsymmErrors.h>
-#include <TLatex.h>
-#include <TMinuit.h>
-#include <vector>
-#include <map>
-#include <string>
-#include <stdlib.h>
-#include "TH1.h"
-#include "TCanvas.h"
-
-//FIXME: does this work on mac?
-#include <sys/stat.h>
-
-//#include "CRawTrk.hh"
-
-#include "CEventMc.hh"
-#include "CAnalysisManager.hh"
-#include "GAnalysisIdentification.hh"
-#include "GBasicTrigger.hh"
-#include "GSimulationParameter.hh"
-#include "GPreselection.hh"
-#include "CraneConstants.hh"
-#include "CraneLogging.hh"
-#include "GPlottingTools.hh"
-#include "CNet.hh"
-#include "CBackpropagation.hh"
-
-#include "GGeometry.hh"
-
-#ifdef USE_BOOST_PROGRAM_OPTIONS
-#include "GOptionParser.hh"
-#include "GFileIO.hh"
-#endif
 
 using namespace Crane::Analysis;
 namespace ca = Crane::Analysis;
@@ -60,10 +22,16 @@ GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<int>("event", "specific event", 0, "e");
+parser->AddCommandLineOption<bool>("MC_truth", "specific event", 0, "m");
+parser->AddCommandLineOption<bool>("dEdx", "specific event", 0, "x");
+parser->AddCommandLineOption<bool>("Edep", "specific event", 0, "p");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
 string reco_path = parser->GetOption<string>("in_path");
+bool EDEP = parser->GetOption<bool>("Edep");
+bool MC = parser->GetOption<bool>("MC_truth");
+bool DEDX = parser->GetOption<bool>("dEdx");
 int sp_event = parser->GetOption<int>("event");
 
 
@@ -88,13 +56,11 @@ double tracker_ZBaricenter = 734; //mm
 double zTolerance = 500; //mm
 double yTolerance = 600; //mm
 
-/*
 //Prepare MC event
 CEventMc* MCEvent = new CEventMc(); //New reconstructed event
 TChain * TreeMC = new TChain("TreeMc"); //New TreeMC Tchain object (this is new to me)
 TreeMC->SetBranchAddress("Mc", &MCEvent); //Set the branch address using Event (defined above)
 TreeMC->Add(FilenameRoot);
-*/
 
 int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
 double TrackerCut = 0.4; //Threshold for an energy deposition to be considered a hit
@@ -106,6 +72,20 @@ double coslow = 1; //0.62 //0.8
 double eventbetacut = 0.2; //Cut that is applied to all events
 double betacut = 0.9; //Separation of quandrants in the beta plot
 const Int_t NBins = 50;
+
+float Ztof = 5.574;
+float Atof = 10.3;
+float Ltof = 0.635;
+float rtof = 1.032;
+//float Gtofnew = tf; //1/0.9; //(1/0.71);
+//cout << "sqrt(Gtofnew) = " << sqrt(tf) << endl;
+
+float Ztkr = 14;
+float Atkr = 28.3;
+float Ltkr = 0.22; //GAPS Tracker //0.25; //MC
+float rtkr = 2.33;
+//float Gtkrnew = tk; //1; // (1/0.83);
+//cout << "sqrt(Gtkrnew) = " << sqrt(tk) << endl;
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
@@ -131,28 +111,83 @@ cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/
 for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
     TreeRec->GetEntry(i);
     TreeGReco->GetEntry(i);
-    //TreeMC->GetEntry(i);
+    TreeMC->GetEntry(i);
 
     //cout << endl << "Event is " << i << endl;
     //cout << "Number of tracks " << Event->GetNTracks() << endl;
 
     //Energy deposition information for all of the tracks!
 
+
+    //Tell me about the LG hits!
+    for(unsigned int k = 0; k < Event->GetTriggerVolumeId().size(); k++){
+        unsigned int VolumeId = Event->GetTriggerVolumeId().at(k);
+        cout << "LG Hit " << k << " at Volid " << VolumeId << endl;
+    }
+
+    //Tell me about the energy depositions of all the tracks
+    /*
     for(uint t = 0; t < Event->GetNTracks(); t++){
         cout << "Track is " << t << endl;
         if(Event->GetTrack(t)->IsPrimary()) cout << "I am the Primary track! " << endl;
         for(uint isig=0; isig<Event->GetTrack(t)->GetEnergyDeposition().size(); isig++){
             cout << "Edep " << isig << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig) << " at " << Event->GetTrack(t)->GetVolumeId(isig) << endl;
         }
+    }*/
+
+    //Tell me about the dE/dx of all tracks where dE/dx = Energy deposit / (rho_tkr/tof * length traveled through detector  )
+    //Length traveled through flat detector (Si(Li), CBE_top,bot, UMB) = L_tof/tkr / cos(theta)
+    //Length traveled through vertical detector CBE_sides, COR = L_tof/tkr / sqrt(1 - sin^2(theta)
+
+    if(DEDX || EDEP){
+
+    for(uint t = 0; t < Event->GetNTracks(); t++){
+        cout << "Track is " << t << endl;
+        if(Event->GetTrack(t)->IsPrimary()) cout << "I am the Primary track! " << endl;
+        //cout << "Primary Track Momentum Direction is " << Event->GetPrimaryMomentumDirection()<< endl;
+        //cout << "Primary: Cos(Theta) is " << Event->GetPrimaryMomentumDirection().CosTheta() << endl;
+        //cout << "Track: " << t << " Momentum Direction[0] is " << Event->GetTrack(t)->GetMomentumDirection()[0] << endl;
+        //cout << "Track: " << t << " Momentum Direction[0][2] " << Event->GetTrack(t)->GetMomentumDirection()[0][2] << endl;
+
+        float costheta = fabs(Event->GetTrack(t)->GetMomentumDirection()[0][2]);
+
+        for(uint isig=0; isig<Event->GetTrack(t)->GetEnergyDeposition().size(); isig++){
+            unsigned int VolumeId  = Event->GetTrack(t)->GetVolumeId(isig);
+            //cout << "Edep " << isig << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig) << " at " << VolumeId<< endl;
+            if(GGeometryObject::IsTofVolume(VolumeId) && Event->GetTrack(t)->GetEnergyDeposition(isig) > TofCutLow){
+                if(volspec(VolumeId,2,1) == 0 || volspec(VolumeId,2,1) == 1){
+                    //cout << "Volid is " << VolumeId << " it's a flat paddle! " << endl;
+                    //cout << "Step length is " << Ltof/costheta << endl;
+                    if(EDEP) cout << "Edep " << isig  << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig) << " at TOF " << volspec(VolumeId,0,3) << endl;
+                    if(DEDX) cout << "dE/dx " << isig  << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig)/(rtof*Ltof/costheta) << " at TOF " << volspec(VolumeId,0,3) << endl;
+                }else{
+                    //cout << "Volid is " << VolumeId << " it's a vertical paddle! " << endl;
+                    //cout << "Step length is " << Ltof/sqrt(1 - pow(costheta,2)) << endl;
+                    if(EDEP)cout << "Edep " << isig << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig) << " at TOF " << volspec(VolumeId,0,3) << endl;
+                    if(DEDX)cout << "dE/dx " << isig << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig)/(rtof*Ltof/sqrt(1 - pow(costheta,2)) )  << " at TOF " << volspec(VolumeId,0,3) << endl;
+                }
+            }
+
+            if(GGeometryObject::IsTrackerVolume(VolumeId) && Event->GetTrack(t)->GetEnergyDeposition(isig) > TrackerCut){
+                //cout << "Volid is " << VolumeId << " it's the tracker " << endl;
+                int layer = GGeometryObject::GetTrackerLayer(VolumeId);
+                //cout << "Step length is " << Ltkr/costheta << endl;
+                if(EDEP)cout << "Edep " << isig << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig) << " at TKR L" << layer << endl;
+                if(DEDX)cout << "dE/dx " << isig << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig)/(rtkr*Ltkr/costheta) << " at TKR L" << layer << endl;
+            }
+
+        }
     }
+
+    } //Closed bracket for dEdx
 
     //cout << "Event ID? " << Event->GetEventId() << endl;
     //cout << "Event Number? " << Event->GetEventNumber() << endl; //Gviz2D is for sure pulling Event number!
     //cout << "Reconstruction used: " << Event->GetActiveReconstruction() << endl;
 
-/*
+    /*
     //Searching for slowing down event in flight data.
-    if(fabs(Event->GetPrimaryBeta()) > 0.9 && fabs(Event->GetPrimaryBeta()) < 1.0 && Event->GetNTracks() == 1 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -0.75 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -0.54){
+    if(fabs(Event->GetPrimaryBeta()) > 0.9 && fabs(Event->GetPrimaryBeta()) < 1.0 && Event->GetNTracks() == 1 && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -1 && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -0.54){
         int UMBflag = 0;
         int CORflag = 0;
         int CBEtopflag = 0;
@@ -188,10 +223,11 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
             for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
                  unsigned int VolumeId = Event->GetTrack(0)->GetVolumeId(isig);
                  cout << "Energy deposition " << isig << " is " << Event->GetTrack(0)->GetEnergyDeposition(isig) << " at " << VolumeId << endl;
-             }
-        }
+            }
+        }*/
 
 
+        /*
         //Stopping particles!
         if(UMBflag > 0 && CBEtopflag > 0 && CBEbotflag == 0 && tkrflag > 2 && tkrflag < 5 && CORflag == 0 && CBEsideflag == 0 &&  Event->GetTriggerVolumeId().size() < 3){
                 cout << "Event " << i << " is a cool stopping(?) friend " << endl;
@@ -199,8 +235,8 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
                     unsigned int LGVolumeId = Event->GetTriggerVolumeId().at(k);
                     cout << " LG Trigger VID " << k << ": " << LGVolumeId << endl;
                 }
-        }
-    }*/
+        }*/
+    //}
 
     //End stopping friend search
 
@@ -214,17 +250,22 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
     }
     */
 
-    /*
+    //For MC truth data on those rad as hay events
+
+    if(MC){
+
 	cout << endl << "MC info " << endl;
 	cout << "Number of tracks " << MCEvent->GetNTracks() << endl;
 	vector<unsigned int> MCVolid;
 	vector<double> MCEdep;
+	vector<int> MCSpec;
 
     for(uint t = 0; t < MCEvent->GetNTracks();t++){
-        cout << "Track is " << t << endl;
+        cout << endl << "Track is " << t << endl;
+        cout << "Particle is " << MCEvent->GetTrack(t)->GetPdg() << endl;
         for(uint isig=0; isig<MCEvent->GetTrack(t)->GetEnergyDeposition().size(); isig++){
             unsigned int VolumeId  = MCEvent->GetTrack(t)->GetVolumeId(isig);
-            //cout << "VID = " << VolumeId << endl;
+            cout << "Energy deposition is " << MCEvent->GetTrack(t)->GetEnergyDeposition(isig) << " at VID " << VolumeId << endl;
             //cout << MCVolid.size() << endl;
 
             //int vsize = MCVolid.size();
@@ -234,27 +275,35 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
                 if (MCVolid[k] == VolumeId) { //If volumeid is in the vector already, add the energy deposition to the vector counting edeps there
                     MCEdep[k] = MCEdep[k] + MCEvent->GetTrack(t)->GetEnergyDeposition(isig);
                     index = k;
+                    //cout << "Added to existing Volid " << endl;
                 }
             }
             if(index == -1){ //If VolumeId is not in the vector, add it to the vector and add the energy deposition to the energy desposition vector
                 //cout << "VID not found, adding" << endl;
+                MCSpec.push_back(MCEvent->GetTrack(t)->GetPdg());
                 MCVolid.push_back(VolumeId);
                 MCEdep.push_back(MCEvent->GetTrack(t)->GetEnergyDeposition(isig));
+                //cout << "New Volid Hit! " << endl;
             }
 
             //cout << "MC: Hit " << isig << " Edep " << MCEvent->GetTrack(t)->GetEnergyDeposition(isig) << " at " << VolumeId << endl;
             //cout << "Method 2? " << Event->GetTrack(0)->GetEnergyDeposition().at(isig) << endl;
         }
     } //End loop over tracks
-    */
 
-    /*
-    cout << endl;
+
+    for (int k = 0; k < MCVolid.size(); k++) { //Check to see if there's a significant hit from a primary particle (need to choose)
+        if(MCEdep[k] > 0.4) cout << "High Edep! Volid " << MCVolid[k] << " Edep " << MCEdep[k] << " Main particle: " <<  MCSpec[k] << endl;
+    }
+
+    } //End MC if statement
+
+    /*cout << endl;
     for (int k = 0; k < MCVolid.size(); k++) {
         cout << "VID " << MCVolid[k] << " total edep " << MCEdep[k] << endl;
     } //This seems to be a fine way of determining total edeps in the instrument from MC
-    cout << endl;
-    */
+    cout << endl;*/
+
 
     /*
 	if(MCEvent->GetNTracks() >= 0){ //Just output everything right now
