@@ -1,4 +1,4 @@
-//To run, do ./OccNoCuts -i /home/kelsey/simulations/simdat/ground/251204/ethernet251204_0 -o test
+//To run, do /home/kelsey/GAPS_TrackerEnergyDep/build/HoursOccu -i /home/kelsey/simulations/simdat/flight/251221/FPSI/starlink251221_0
 
 using namespace std;
 
@@ -152,8 +152,12 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
         if(Hour != hour_flag){
             cout << "hour_flag " << hour_flag << endl;
+            TreeRec->GetEntry(i-10);
+            TTimeStamp T_hourend(Event->GetEventTime());
+            string timestamp_end = T_hourend.AsString("s");
+            TreeRec->GetEntry(i);
             string time_thisstep = T2.AsString("s");
-            string time = time_previous + " to " + time_thisstep.substr(time_thisstep.length() - 8);
+            string time = time_previous + " to " + timestamp_end.substr(timestamp_end.length() - 8);
             time_previous = time_thisstep;
             cout << time << endl;
 

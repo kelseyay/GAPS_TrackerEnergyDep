@@ -2,7 +2,7 @@
 //This will start simple with beta from at least three tracker hits with energy deposition > 0.4
 
 // How to use:
-// ./MCEdepBeta -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1_FTFP_BERT_1757850432_rec -l 0.4 -u 0.8
+// /home/kelsey/GAPS_TrackerEnergyDep/build/MCEdepBeta -i /home/kelsey/simulations/simdat/proton/v3.0.0/triggerlevel1/ -l 0.4 -u 0.8
 
 
 using namespace std;
@@ -153,8 +153,9 @@ TH1D * HBetaProxy = Plotting.DefineTH1D("HBetaProxy",20, betacut, betahigh, "Bet
 TH1D * HBetaRec = Plotting.DefineTH1D("HBetaRec",20, betacut, betahigh, "Beta Reconstructed", "entries", 10, 100000);
 TH1D * HBetaGen = Plotting.DefineTH1D("HBetaGen",20, betacut, betahigh, "Generated Beta", "entries", 10, 100000);
 int bcounts = 0;
-TH2D * HRecB_vs_GenB = new TH2D("HRecB_vs_GenB","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 1);
+TH2D * HRecB_vs_GenB = new TH2D("HRecB_vs_GenB","Rec_Beta vs Gen_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 1);
 TH2D * HProxB_vs_GenB = new TH2D("HProxB_vs_GenB","Prox_B vs Gen_Beta",50, betacut - 0.1, betahigh + 0.1, 50, 0.1, 1);
+TH2D * HRecB_vs_ProxB = new TH2D("HRecB_vs_ProxB","Rec_Beta vs Prox_B",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 1);
 
 TH1F * HBetaGen_Weight = new TH1F("HBetaGen_Weight","HBetaGen_Weight",40, betacut, betahigh);
 TH1F * HBetaProxy_Weight = new TH1F("HBetaProxy_Weight","HBetaProx_Weight",40, betacut, betahigh);
@@ -356,6 +357,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                             bcounts++;
                             HRecB_vs_GenB->Fill(Event->GetPrimaryBetaGenerated(),Event->GetPrimaryBeta());
                             HProxB_vs_GenB->Fill(Event->GetPrimaryBetaGenerated(),TrBP);
+                            HRecB_vs_ProxB->Fill(Event->GetPrimaryBeta(),TrBP);
 
                             //Weighted MC filling below
 
@@ -384,6 +386,8 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 histplot2d("c1",HRecB_vs_GenB,"Rec_B versus Gen_B","Generated Beta", "Reconstructed Beta","NEntries", out_path + "GenBRec" + "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2) + "TOF" + to_string(TF) + "TKR" + to_string(TKR) );
 histplot2d("c2",HProxB_vs_GenB,"Prox_B versus Gen_B","Generated Beta", "Proxy Beta","NEntries", out_path + "GenBProxB" + "B" +  roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
+histplot2d("c2_5",HProxB_vs_GenB,"Prox_B versus Rec_B","Reconstructed Beta", "Proxy Beta","NEntries", out_path + "RecBProxB" + "B" +  roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
+
 
 HBetaRec->SetMaximum(bcounts);
 HBetaGen->SetMaximum(bcounts);
