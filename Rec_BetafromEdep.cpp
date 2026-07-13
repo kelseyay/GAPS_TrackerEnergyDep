@@ -1,8 +1,11 @@
 //Hopefully this script will provide a primary beta from energy depositions in Not That Much Time.
 //This will start simple with beta from at least three tracker hits with energy deposition > 0.4
+//Alright so I named this sometihng stupid. We have Edep vs beta and this is Edep FROM beta...
+
 
 // How to use:
-// ./RecEdepBeta -i /home/kelsey/simulations/simdat/mu/v.3.0.0/triggerlevel1/mu-_gaps_triggerlevel1_FTFP_BERT_1757850432_rec -l 0.4 -u 0.8
+// /home/kelsey/GAPS_TrackerEnergyDep/build/RecEdepBeta -i /home/kelsey/simulations/simdat/proton/v3.0.0/triggerlevel1/ -l 0.2 -u 1.5
+// /home/kelsey/GAPS_TrackerEnergyDep/build/RecEdepBeta -i /home/kelsey/simulations/simdat/flight/251221/FPSI/ -l 0.2 -u 1.5 -r 2
 
 
 using namespace std;
@@ -146,6 +149,8 @@ char text[400]; //This variable is used later to name the plots
 //For this plot, only want Beta Proxy and Beta reconstruction
 TH1F * HBetaProxy = new TH1F("HBetaProxy","HBetaProxy",40, betacut, betahigh);
 TH1F * HBetaRec = new TH1F("HBetaRec","HBetaRec",40, betacut, betahigh);
+TH2D * HRecB_vs_ProxB = new TH2D("HRecB_vs_ProxB","Rec_Beta vs Prox_B",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 1);
+
 int bcounts = 0;
 
 //TH2D * HRecB_vs_GenB_Weight = new TH2D("HRecB_vs_GenB_Weight","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 1);
@@ -271,6 +276,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                             HBetaProxy->Fill(TrBP);
                             HBetaRec->Fill(Event->GetPrimaryBeta());
                             bcounts++;
+                            HRecB_vs_ProxB->Fill(Event->GetPrimaryBeta(),TrBP);
                         }
 
 				} //Closed bracket Beta Proxy calculation
@@ -291,6 +297,8 @@ HBetaRec->SetMaximum(bcounts);
 HBetaProxy->SetMaximum(bcounts);
 histplot1f("c1",HBetaProxy,"Proxy Beta","Proxy Beta","NEntries", out_path + "Rec_BetaProxy"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR) + "TF_Factor" + roundstr_d(tf,2) + "TK_Factor" + roundstr_d(tk,2)  );
 histplot1f("c2",HBetaRec,"Reconstructed Beta","Reconstructed Beta","NEntries", out_path + "Rec_BetaRec " + "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2) + "TOF" + to_string(TF) + "TKR" + to_string(TKR) + "TF_Factor" + to_string(tf) + "TK_Factor" + roundstr_d(tk,2)  );
+histplot2d("c2_5",HRecB_vs_ProxB,"Prox_B versus Rec_B","Reconstructed Beta", "Proxy Beta","NEntries", out_path + "RecBProxB" + "B" +  roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
+
 
 myfile.open(out_path + txtname,std::ios::app);
 myfile << "Total Events/Mainscale Factor " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
