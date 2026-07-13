@@ -14,30 +14,6 @@ using namespace std;
 
 #include "KYtools.C"
 
-//FIXME: does this work on mac?
-#include <sys/stat.h>
-
-//#include "CRawTrk.hh"
-
-#include "CEventMc.hh"
-#include "CAnalysisManager.hh"
-#include "GAnalysisIdentification.hh"
-#include "GBasicTrigger.hh"
-#include "GSimulationParameter.hh"
-#include "GPreselection.hh"
-#include "CraneConstants.hh"
-#include "CraneLogging.hh"
-#include "GPlottingTools.hh"
-#include "CNet.hh"
-#include "CBackpropagation.hh"
-
-#include "GGeometry.hh"
-
-#ifdef USE_BOOST_PROGRAM_OPTIONS
-#include "GOptionParser.hh"
-#include "GFileIO.hh"
-#endif
-
 using namespace Crane::Analysis;
 namespace ca = Crane::Analysis;
 namespace cl = Crane::Common;
