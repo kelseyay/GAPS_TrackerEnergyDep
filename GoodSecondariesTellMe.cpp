@@ -79,6 +79,9 @@ const Int_t NBins = 50;
 
 TFile *f;
 
+TTree *Copy_GRecoTree = new TTree("TreeGReco", "GReco Tree");
+TTree *Copy_RecTree = new TTree("TreeRec", "Rec Tree");
+
 if(SAVE){
     //Make a directory to save the root file in
     string outdir = out_path + "Slim_Trim_Skim_Search";
@@ -107,19 +110,17 @@ if(SAVE){
     // Write changes and close file
     f->Write();
 
+    Copy_GRecoTree = TreeGReco->CloneTree(0);
+    Copy_RecTree = TreeRec->CloneTree(0);
+
+    TreeRec->GetEntry(0);
+    TreeGReco->GetEntry(0);
+    Copy_GRecoTree->Fill();
+    Copy_GRecoTree->Write();
+    Copy_RecTree->Fill();
+    Copy_RecTree->Write();
+
 }
-
-TTree *Copy_GRecoTree = new TTree("TreeGReco", "GReco Tree");
-TTree *Copy_RecTree = new TTree("TreeRec", "Rec Tree");
-Copy_GRecoTree = TreeGReco->CloneTree(0);
-Copy_RecTree = TreeRec->CloneTree(0);
-
-TreeRec->GetEntry(0);
-TreeGReco->GetEntry(0);
-Copy_GRecoTree->Fill();
-Copy_GRecoTree->Write();
-Copy_RecTree->Fill();
-Copy_RecTree->Write();
 
 //Next need to add another event?
 
