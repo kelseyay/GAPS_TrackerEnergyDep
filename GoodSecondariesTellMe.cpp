@@ -1,6 +1,8 @@
 //How to use
 // ./SeconSearch -i /home/kelsey/simulations/simdat/antip/v.3.0.0/anti_proton_gaps_triggerlevel2_FTFP_BERT_1754120716
 
+//Something is still wrong with the 2D viewer, but the data in the file is still there so idk
+
 using namespace std;
 
 #include "KYtools.C"
@@ -23,7 +25,8 @@ GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<bool>("save", "save the special events to a root file?",0,"s");
-parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
+parser->AddCommandLineOption<string>("out_file", "name of output path", "", "o");
+parser->AddCommandLineOption<string>("sts_root_name", "name of output root file", "sts_root_test.root", "n");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
@@ -34,6 +37,9 @@ cout << "out path: " << out_path << endl;
 if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash! Adding! " << endl; out_path = out_path + '/'; }
 
 string reco_path = parser->GetOption<string>("in_path");
+
+string sts_file_name = parser->GetOption<string>("sts_root_name");
+if(sts_file_name.compare(sts_file_name.length()-5,sts_file_name.length(),".root") != 0){ cout << "NO .root at the end of the root name! Adding!" << endl; sts_file_name = sts_file_name + ".root"; }
 
 cout << reco_path << endl;
 if(reco_path.compare(reco_path.length()-5,reco_path.length(),".root") == 0){ cout << ".root at the end of the reco path! Deleting!" << endl; reco_path = reco_path.substr(0,reco_path.length()-5); }
@@ -81,6 +87,8 @@ TFile *f;
 
 TTree *Copy_GRecoTree = new TTree("TreeGReco", "GReco Tree");
 TTree *Copy_RecTree = new TTree("TreeRec", "Rec Tree");
+Copy_GRecoTree = TreeGReco->CloneTree(0);
+Copy_RecTree = TreeRec->CloneTree(0);
 
 if(SAVE){
     //Make a directory to save the root file in
@@ -93,7 +101,7 @@ if(SAVE){
     //Copy the first file in the list of root files and put it in the directory under a new name:
     TreeRec->LoadTree(0);
     cout << "File 0 is: " << TreeRec->GetCurrentFile()->GetName() << endl;
-    string sts_file = "sts_file.root"; //Title of the new root file
+    string sts_file = sts_file_name; //Title of the new root file
     string full_title = out_path + "Slim_Trim_Skim_Search/" + sts_file;
     char SaveRootFile[600];
     sprintf(SaveRootFile, "cp %s %s",TreeRec->GetCurrentFile()->GetName(), full_title.c_str());
@@ -110,26 +118,12 @@ if(SAVE){
     // Write changes and close file
     f->Write();
 
-    Copy_GRecoTree = TreeGReco->CloneTree(0);
-    Copy_RecTree = TreeRec->CloneTree(0);
-
-    TreeRec->GetEntry(0);
-    TreeGReco->GetEntry(0);
-    Copy_GRecoTree->Fill();
-    Copy_GRecoTree->Write();
-    Copy_RecTree->Fill();
-    Copy_RecTree->Write();
-
 }
 
 //Next need to add another event?
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
-
-//Not a proper tell me anymore lol
-TH1F * h;
-h = new TH1F ("Edep l", "Edep", NBins, xlow,xhigh);
 
 //For Plotting purposes
 ca::GPlottingTools Plotting;
