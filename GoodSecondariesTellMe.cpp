@@ -23,14 +23,20 @@ GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<bool>("save", "save the special events to a root file?",0,"s");
+parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
 bool SAVE = parser->GetOption<bool>("save");
 
+string out_path = parser->GetOption<string>("out_file");
+cout << "out path: " << out_path << endl;
+if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash! Adding! " << endl; out_path = out_path + '/'; }
+
 string reco_path = parser->GetOption<string>("in_path");
 
 cout << reco_path << endl;
+if(reco_path.compare(reco_path.length()-5,reco_path.length(),".root") == 0){ cout << ".root at the end of the reco path! Deleting!" << endl; reco_path = reco_path.substr(0,reco_path.length()-5); }
 
 char FilenameRoot[400];
 sprintf(FilenameRoot,"%s*.root",reco_path.c_str());
@@ -52,10 +58,6 @@ double tracker_ZBaricenter = 734; //mm
 double zTolerance = 500; //mm
 double yTolerance = 600; //mm
 
-//Reconstructed root file
-//TFile *f_template = new TFile("/home/kelsey/simulations/simdat/flight/251221/FPSI/starlink251221_0003_FindPrimaryStarIterative_rec.root", "READ");
-
-
 /*
 //Prepare MC event
 CEventMc* MCEvent = new CEventMc(); //New reconstructed event
@@ -75,25 +77,37 @@ double eventbetacut = 0.2; //Cut that is applied to all events
 double betacut = 0.9; //Separation of quandrants in the beta plot
 const Int_t NBins = 50;
 
+TFile *f;
 
-//My horrible rat child: I will need to figure out how to copy the GGeometry folder in the thing!!
-//Scrub the tree clean
-TFile *f = new TFile("ky_root_MC_hebar.root", "UPDATE");
+if(SAVE){
+    //Make a directory to save the root file in
+    string outdir = out_path + "Slim_Trim_Skim_Search";
+    char SaveDir[600];
+    sprintf(SaveDir, "mkdir %s", outdir.c_str());
+    int success = system(SaveDir);
+    if (success == 0){std::cout << "Directory " << SaveDir <<" created!" << std::endl;};
 
-// Delete the tree from memory/disk (the ;* ensures all cycles are removed)
-f->Delete("TreeMc;*");
-f->Delete("TreeRec;*");
-f->Delete("TreeGReco;*");
-f->Delete("SimulationParameterTree;*");
+    //Copy the first file in the list of root files and put it in the directory under a new name:
+    TreeRec->LoadTree(0);
+    cout << "File 0 is: " << TreeRec->GetCurrentFile()->GetName() << endl;
+    string sts_file = "sts_file.root"; //Title of the new root file
+    string full_title = out_path + "Slim_Trim_Skim_Search/" + sts_file;
+    char SaveRootFile[600];
+    sprintf(SaveRootFile, "cp %s %s",TreeRec->GetCurrentFile()->GetName(), full_title.c_str());
+    int success_root = system(SaveRootFile);
+    if (success_root == 0){std::cout << "Root file copy command: " << SaveRootFile <<" success!" << std::endl;};
 
-// Write changes and close file
-f->Write();
-f->Close();
+    f = new TFile(full_title.c_str(), "UPDATE");
+    // Delete all trees except the Geometry-related ones.
+    f->Delete("TreeMc;*");
+    f->Delete("TreeRec;*");
+    f->Delete("TreeGReco;*");
+    f->Delete("SimulationParameterTree;*");
 
-//Next need to add another event?
+    // Write changes and close file
+    f->Write();
 
-TFile f2("ky_root_MC_hebar.root", "update");
-//TFile f2("ky_root_Rec.root", "update");
+}
 
 TTree *Copy_GRecoTree = new TTree("TreeGReco", "GReco Tree");
 TTree *Copy_RecTree = new TTree("TreeRec", "Rec Tree");
@@ -106,6 +120,8 @@ Copy_GRecoTree->Fill();
 Copy_GRecoTree->Write();
 Copy_RecTree->Fill();
 Copy_RecTree->Write();
+
+//Next need to add another event?
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
@@ -202,15 +218,17 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 			}
 		}
 
-
-
 	} //End event level cuts
 
 }
 
-Copy_GRecoTree->Write();
-Copy_RecTree->Write();
-f2.Close();
+if(SAVE){
+    f->Write();
+    Copy_GRecoTree->Write();
+    Copy_RecTree->Write();
+    f->Close();
+}
+
 cout << endl << "I am done" << endl;
 return 1;
 
