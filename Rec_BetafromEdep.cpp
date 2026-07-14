@@ -296,8 +296,8 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 HBetaRec->SetMaximum(bcounts);
 HBetaProxy->SetMaximum(bcounts);
 histplot1f("c1",HBetaProxy,"Proxy Beta","Proxy Beta","NEntries", out_path + "Rec_BetaProxy"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR) + "TF_Factor" + roundstr_d(tf,2) + "TK_Factor" + roundstr_d(tk,2)  );
-histplot1f("c2",HBetaRec,"Reconstructed Beta","Reconstructed Beta","NEntries", out_path + "Rec_BetaRec " + "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2) + "TOF" + to_string(TF) + "TKR" + to_string(TKR) + "TF_Factor" + to_string(tf) + "TK_Factor" + roundstr_d(tk,2)  );
-histplot2d("c2_5",HRecB_vs_ProxB,"Prox_B versus Rec_B","Reconstructed Beta", "Proxy Beta","NEntries", out_path + "RecBProxB" + "B" +  roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
+histplot1f("c2",HBetaRec,"Reconstructed Beta","Reconstructed Beta","NEntries", out_path + "Rec_BetaRec " + "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2) + "TOF" + to_string(TF) + "TKR" + to_string(TKR) + "TF_Factor" + roundstr_d(tf,2) + "TK_Factor" + roundstr_d(tk,2)  );
+histplot2d("c2_5",HRecB_vs_ProxB,"Prox_B versus Rec_B","Reconstructed Beta", "Proxy Beta","NEntries", out_path + "RecBProxB" + "B" +  roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR) + "TF_Factor" + roundstr_d(tf,2) + "TK_Factor" + roundstr_d(tk,2) );
 
 
 myfile.open(out_path + txtname,std::ios::app);

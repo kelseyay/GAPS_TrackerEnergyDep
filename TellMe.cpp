@@ -25,6 +25,7 @@ parser->AddCommandLineOption<int>("event", "specific event", 0, "e");
 parser->AddCommandLineOption<bool>("MC_truth", "specific event", 0, "m");
 parser->AddCommandLineOption<bool>("dEdx", "specific event", 0, "x");
 parser->AddCommandLineOption<bool>("Edep", "specific event", 0, "p");
+parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
@@ -34,8 +35,21 @@ bool MC = parser->GetOption<bool>("MC_truth");
 bool DEDX = parser->GetOption<bool>("dEdx");
 int sp_event = parser->GetOption<int>("event");
 
+string out_path = parser->GetOption<string>("out_file");
+cout << "out path: " << out_path << endl;
+//cout << "out path last string " << out_path[out_path.length()-1] << endl;
 
-cout << reco_path << endl;
+if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash! Adding! " << endl; out_path = out_path + '/'; }
+
+
+string compare = ".root";
+
+//str1.compare(0, 5, str2) == 0
+cout << "reco_path: " << reco_path << endl;
+//Compare == 0 if they are the same,
+if(reco_path.compare(reco_path.length()-5,reco_path.length(),compare) == 0){ cout << ".root at the end of the reco path! Deleting!" << endl; reco_path = reco_path.substr(0,reco_path.length()-5); }
+
+//if(reco_path.compare(reco_path.length()-5,reco_path.length(),"*.root") == 1){ cout << ".root at the end of the reco path! Deleting!" << endl; }
 
 char FilenameRoot[400];
 sprintf(FilenameRoot,"%s*.root",reco_path.c_str());
@@ -45,6 +59,10 @@ CEventRec* Event = new CEventRec(); //New reconstructed event
 TChain * TreeRec = new TChain("TreeRec"); //New TreeRec Tchain object (this is new to me)
 TreeRec->SetBranchAddress("Rec", &Event); //Set the branch address using Event (defined above)
 TreeRec->Add(FilenameRoot);
+
+//Perfect! I wanted to output the first root file if a whole bunch were added with a star and this works!
+TreeRec->LoadTree(0);
+cout << "File 0 is: " << TreeRec->GetCurrentFile()->GetName() << endl;
 
 //Prepare Reconstruction variable:
 Crane::Reconstruction::TrackFit::GDataEvent * reco_data_event_ = new Crane::Reconstruction::TrackFit::GDataEvent();
@@ -158,12 +176,12 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
                 if(volspec(VolumeId,2,1) == 0 || volspec(VolumeId,2,1) == 1){
                     //cout << "Volid is " << VolumeId << " it's a flat paddle! " << endl;
                     //cout << "Step length is " << Ltof/costheta << endl;
-                    if(EDEP) cout << "Edep " << isig  << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig) << " at TOF " << volspec(VolumeId,0,3) << endl;
+                    if(EDEP) cout << "Edep " << isig  << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig) << " at " << VolumeId << endl; // " at TOF " << volspec(VolumeId,0,3) << endl;
                     if(DEDX) cout << "dE/dx " << isig  << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig)/(rtof*Ltof/costheta) << " at TOF " << volspec(VolumeId,0,3) << endl;
                 }else{
                     //cout << "Volid is " << VolumeId << " it's a vertical paddle! " << endl;
                     //cout << "Step length is " << Ltof/sqrt(1 - pow(costheta,2)) << endl;
-                    if(EDEP)cout << "Edep " << isig << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig) << " at TOF " << volspec(VolumeId,0,3) << endl;
+                    if(EDEP)cout << "Edep " << isig << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig) << " at " << VolumeId << endl; //" at TOF " << volspec(VolumeId,0,3) << endl;
                     if(DEDX)cout << "dE/dx " << isig << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig)/(rtof*Ltof/sqrt(1 - pow(costheta,2)) )  << " at TOF " << volspec(VolumeId,0,3) << endl;
                 }
             }
@@ -172,7 +190,7 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
                 //cout << "Volid is " << VolumeId << " it's the tracker " << endl;
                 int layer = GGeometryObject::GetTrackerLayer(VolumeId);
                 //cout << "Step length is " << Ltkr/costheta << endl;
-                if(EDEP)cout << "Edep " << isig << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig) << " at TKR L" << layer << endl;
+                if(EDEP)cout << "Edep " << isig << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig) << " at " << VolumeId << endl; /*<< " at TKR L" << layer << endl;*/
                 if(DEDX)cout << "dE/dx " << isig << " is " << Event->GetTrack(t)->GetEnergyDeposition(isig)/(rtkr*Ltkr/costheta) << " at TKR L" << layer << endl;
             }
 

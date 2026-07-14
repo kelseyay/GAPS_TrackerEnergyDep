@@ -175,6 +175,10 @@ add_executable(BetaHisto BetaHistCuts.cpp)
 target_include_directories(BetaHisto PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(BetaHisto ${LIB_DIRS})
 
+add_executable(PrimaryBeta PrimaryBetaHistCuts.cpp)
+target_include_directories(PrimaryBeta PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(PrimaryBeta ${LIB_DIRS})
+
 add_executable(OccNoCuts OccuNoCuts.cpp)
 target_include_directories(OccNoCuts PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(OccNoCuts ${LIB_DIRS})
