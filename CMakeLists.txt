@@ -206,3 +206,7 @@ target_link_libraries(MCEdepBeta ${LIB_DIRS})
 add_executable(RecEdepBeta Rec_BetafromEdep.cpp)
 target_include_directories(RecEdepBeta PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
 target_link_libraries(RecEdepBeta ${LIB_DIRS})
+
+add_executable(SlimTrimSkim SlimTrimSkimAttempt.cpp)
+target_include_directories(SlimTrimSkim PRIVATE ${GAPS_INCLUDE_DIRS}/gaps)
+target_link_libraries(SlimTrimSkim ${LIB_DIRS})
