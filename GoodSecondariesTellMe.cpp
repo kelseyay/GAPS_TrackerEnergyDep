@@ -1,8 +1,6 @@
 //How to use
 // ./SeconSearch -i /home/kelsey/simulations/simdat/antip/v.3.0.0/anti_proton_gaps_triggerlevel2_FTFP_BERT_1754120716
 
-//Something is still wrong with the 2D viewer, but the data in the file is still there so idk
-
 using namespace std;
 
 #include "KYtools.C"
@@ -84,41 +82,13 @@ double betacut = 0.9; //Separation of quandrants in the beta plot
 const Int_t NBins = 50;
 
 TFile *f;
+TFile *f_source;
+TDirectoryFile *GOptions_copy;
 
 TTree *Copy_GRecoTree = new TTree("TreeGReco", "GReco Tree");
 TTree *Copy_RecTree = new TTree("TreeRec", "Rec Tree");
 Copy_GRecoTree = TreeGReco->CloneTree(0);
 Copy_RecTree = TreeRec->CloneTree(0);
-
-if(SAVE){
-    //Make a directory to save the root file in
-    string outdir = out_path + "Slim_Trim_Skim_Search";
-    char SaveDir[600];
-    sprintf(SaveDir, "mkdir %s", outdir.c_str());
-    int success = system(SaveDir);
-    if (success == 0){std::cout << "Directory " << SaveDir <<" created!" << std::endl;};
-
-    //Copy the first file in the list of root files and put it in the directory under a new name:
-    TreeRec->LoadTree(0);
-    cout << "File 0 is: " << TreeRec->GetCurrentFile()->GetName() << endl;
-    string sts_file = sts_file_name; //Title of the new root file
-    string full_title = out_path + "Slim_Trim_Skim_Search/" + sts_file;
-    char SaveRootFile[600];
-    sprintf(SaveRootFile, "cp %s %s",TreeRec->GetCurrentFile()->GetName(), full_title.c_str());
-    int success_root = system(SaveRootFile);
-    if (success_root == 0){std::cout << "Root file copy command: " << SaveRootFile <<" success!" << std::endl;};
-
-    f = new TFile(full_title.c_str(), "UPDATE");
-    // Delete all trees except the Geometry-related ones.
-    f->Delete("TreeMc;*");
-    f->Delete("TreeRec;*");
-    f->Delete("TreeGReco;*");
-    f->Delete("SimulationParameterTree;*");
-
-    // Write changes and close file
-    f->Write();
-
-}
 
 //Next need to add another event?
 
@@ -205,7 +175,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 		}
 
 		//This tell me was looking for really nice reconstructed events with many secondaries.
-		if(vertexIsOk_Reco && Event->GetNTracks() > 7 && Event->GetNTracks() < 13 && PtrackTKR > 0 && OffHitCtr < 6 /*&& needthree == Event->GetNTracks()*/ && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
+		if(vertexIsOk_Reco && Event->GetNTracks() > 5 && Event->GetNTracks() < 13 && PtrackTKR > 0 && OffHitCtr < 6 /*&& needthree == Event->GetNTracks()*/ && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
 			cout << "Event " << i << " vertex in the tracker! Reasonable Secondary Number! Not so many Off track hits!" << endl;
 			if(SAVE){
 			    Copy_GRecoTree->Fill();
@@ -218,7 +188,24 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 }
 
 if(SAVE){
-    f->Write();
+    //Make a directory to save the root file in
+    string outdir = out_path + "Slim_Trim_Skim_Search";
+    char SaveDir[600];
+    sprintf(SaveDir, "mkdir %s", outdir.c_str());
+    int success = system(SaveDir);
+    if (success == 0){std::cout << "Directory " << SaveDir <<" created!" << std::endl;};
+
+
+    string full_title = out_path + "Slim_Trim_Skim_Search/" + sts_file_name;
+
+    char SaveRootFile[600];
+    f = new TFile(full_title.c_str(), "RECREATE");
+
+    TreeRec->GetEntry(0);
+    cout << "source root file " << TreeRec->GetCurrentFile()->GetName() << endl;
+
+    TObject* geo_tree = TreeRec->GetCurrentFile()->Get("GGeometry");
+    geo_tree->Write("GGeometry"); //This does work!
     Copy_GRecoTree->Write();
     Copy_RecTree->Write();
     f->Close();
