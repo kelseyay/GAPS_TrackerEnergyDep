@@ -7,8 +7,6 @@
 // /home/kelsey/GAPS_TrackerEnergyDep/build/RecEdepBeta -i /home/kelsey/simulations/simdat/proton/v3.0.0/triggerlevel1/ -l 0.2 -u 1.5
 // /home/kelsey/GAPS_TrackerEnergyDep/build/RecEdepBeta -i /home/kelsey/simulations/simdat/flight/251221/FPSI/ -l 0.2 -u 1.5 -r 2
 
-// How to use with factors:
-// /home/kelsey/GAPS_TrackerEnergyDep/build/RecEdepBeta -i /home/kelsey/simulations/simdat/flight/251221/FPSI/ -l 0.2 -u 1.2 -r 2 -f 1.4 -k 1.15 -o ZCuts_Flight_Data/
 
 using namespace std;
 
@@ -60,14 +58,6 @@ float solvermin_tof = ZOne_TOF(0.95);
 TF1 *Z1_tkr_Solve = new TF1("Z1_tkr_Solve", [](double *x, double *p){ return ZOne_TKR(x[0]); }, 0.01, 0.95, 0);
 TF1 *Z1_tof_Solve = new TF1("Z1_tof_Solve", [](double *x, double *p){ return ZOne_TOF(x[0]); }, 0.01, 0.95, 0);
 
-bool charge_cut_z1(double Proxy_Beta, double Reco_Beta){
-    if(Reco_Beta > 0.75 && Proxy_Beta > 0.66){ return 1; }else if(Reco_Beta < 0.75 && Proxy_Beta >  0.83*Reco_Beta + 0.0328){return 1;}else{return 0;}
-}
-
-bool charge_cut_z2(double Proxy_Beta, double Reco_Beta){
-    if(Reco_Beta > 0.75 && Proxy_Beta < 0.55){ return 1; }else if(Reco_Beta < 0.75 && Proxy_Beta <  0.78*Reco_Beta - 0.033){return 1;}else{return 0;}
-}
-
 //Example:
 //TGraph * g = new TGraph(npointx, xvec, yvec);
 //TF1 * f = new TF1("f",[&](double*x, double *p){ return p[0]*g->Eval(x[0]); }, xmin, xmax, 1);
@@ -114,7 +104,7 @@ char FilenameRoot[400];
 sprintf(FilenameRoot,"%s*.root",reco_path.c_str());
 cout << FilenameRoot << endl;
 
-string txtname = "Rec_Beta_from_Edep.txt";
+string txtname = "MCEdep_Beta.txt";
 
 //Prepare textile for saving values
 std::ofstream myfile;
@@ -282,7 +272,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                         //To floor or not to floor!!!
                         //cout << "Beta Prox floor(BP/2) = " << TrBP << endl;
                         if(print)cout << "Beta Prox BP/2 not floor = " << TrBP << endl;
-                        if(TrBP > 0 /*&& charge_cut_z1(TrBP,Event->GetPrimaryBeta())*/){
+                        if(TrBP > 0){
                             HBetaProxy->Fill(TrBP);
                             HBetaRec->Fill(Event->GetPrimaryBeta());
                             bcounts++;
@@ -313,7 +303,6 @@ histplot2d("c2_5",HRecB_vs_ProxB,"Prox_B versus Rec_B","Reconstructed Beta", "Pr
 
 
 myfile.open(out_path + txtname,std::ios::app);
-myfile << TString::Format( "Trigger : %i", TRG) << endl;
 myfile << "Total Events/Mainscale Factor " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 myfile << "TOF Factor " << tf << endl;
 myfile << "TKR Factor " << tk << endl;

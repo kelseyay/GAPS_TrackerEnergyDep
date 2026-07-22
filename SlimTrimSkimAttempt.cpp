@@ -68,10 +68,15 @@ for(uint i=0; i<10; i++){
 TFile good_evts_file((out_path+ sts_file_name).c_str(), "recreate");
 events->GetEntry(0);
 cout << "source root file " << events->GetCurrentFile()->GetName() << endl;
-//cout << "source root file Attempt Get " << events->GetCurrentFile()->Get("GGeometry") << endl;
+//cout << "source root file Attempt Get GGeometry " << events->GetCurrentFile()->Get("GGeometry") << endl;
+//cout << "source root file Attempt Get GOptions " << events->GetCurrentFile()->Get("GOptions") << endl;
+//cout << "source root file Attempt Get nonsense " << events->GetCurrentFile()->Get("sdfaskjdf") << endl;
 
 TObject* geo_tree = events->GetCurrentFile()->Get("GGeometry");
-geo_tree->Write("GGeometry"); //Yayyyyy I think this is it!!!
+geo_tree->Write("GGeometry"); //This does work!
+//TObject* goptions_tree = events->GetCurrentFile()->Get("GOptions"); //Well this doesn't work!!!
+//goptions_tree->Write("GOptions"); //Why doesn't this work :') 2D viewer and everything else still works so maybe can move on.
+
 selected_events->Write();
 good_evts_file.Close();
 

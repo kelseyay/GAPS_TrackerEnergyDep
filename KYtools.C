@@ -282,3 +282,79 @@ void label_2Dhisto(TH2F * h2, TGraph *pts, TGraph *errs) {
     errs->SetMarkerColor(kBlack);
     errs->SetMarkerSize(1.5);
 }
+
+
+vector<TGraph*> MC_weighting_framework_proton(vector<TGraph*> GProtonTotalFluxUnscaled){
+    ca::GPlottingTools Plotting;
+
+    GProtonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GAPS_TrackerEnergyDep/build/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_2212_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.875"), 0.938));
+    GProtonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GAPS_TrackerEnergyDep/build/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_2212_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.625"), 0.938));
+    GProtonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GAPS_TrackerEnergyDep/build/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_2212_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.375"), 0.938));
+    GProtonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GAPS_TrackerEnergyDep/build/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_2212_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.125"), 0.938));
+    GProtonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GAPS_TrackerEnergyDep/build/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_2212_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_-0.875"), 0.938));
+    GProtonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GAPS_TrackerEnergyDep/build/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_2212_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_-0.625"), 0.938));
+    GProtonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GAPS_TrackerEnergyDep/build/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_2212_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_-0.375"), 0.938));
+    GProtonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GAPS_TrackerEnergyDep/build/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_2212_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_-0.125"), 0.938));
+
+    return GProtonTotalFluxUnscaled;
+}
+
+vector<TGraph*> MC_weighting_framework_alpha(vector<TGraph*> GAlphaTotalFluxUnscaled){
+    ca::GPlottingTools Plotting;
+
+    GAlphaTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GitScripts/ActiveScripts/RootCFiles/Fluxes/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_1000020040_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.875"), 3.72));
+    GAlphaTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GitScripts/ActiveScripts/RootCFiles/Fluxes/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_1000020040_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.625"), 3.72));
+    GAlphaTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GitScripts/ActiveScripts/RootCFiles/Fluxes/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_1000020040_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.375"), 3.72));
+    GAlphaTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GitScripts/ActiveScripts/RootCFiles/Fluxes/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_1000020040_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.125"), 3.72));
+    GAlphaTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GitScripts/ActiveScripts/RootCFiles/Fluxes/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_1000020040_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_-0.875"), 3.72));
+    GAlphaTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GitScripts/ActiveScripts/RootCFiles/Fluxes/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_1000020040_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_-0.625"), 3.72));
+    GAlphaTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GitScripts/ActiveScripts/RootCFiles/Fluxes/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_1000020040_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_-0.375"), 3.72));
+    GAlphaTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(string("/home/kelsey/GitScripts/ActiveScripts/RootCFiles/Fluxes/2025_max_atmospheric_fluxes/total_fluxes_coszenith_37000_m_1000020040_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_-0.125"), 3.72));
+
+    return GAlphaTotalFluxUnscaled;
+}
+
+vector<TGraph*> MC_weighting_framework_muon(vector<TGraph*> GMuonTotalFluxUnscaled){
+    ca::GPlottingTools Plotting;
+
+    GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.875"), 0.1057));
+    GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.625"), 0.1057));
+    GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.375"), 0.1057));
+    GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.125"), 0.1057));
+
+    return GMuonTotalFluxUnscaled;
+}
+
+double RateScale_muon(TChain*TreeSimulationParameter, int MainLoopScaleFactor, double StartingPlaneAcceptance, double BinWidthFactor, TH1D* HPrimaryBeta,  vector<pair<double, double>> CosZenithCut, vector<TGraph*> GMuonTotalFluxUnscaled, double FluxScaleFactor, const CEventRec* Event){
+    double AcceptanceScale;
+    double RateScale = 0;
+    if (TreeSimulationParameter != nullptr){
+        AcceptanceScale = MainLoopScaleFactor*StartingPlaneAcceptance/(BinWidthFactor*HPrimaryBeta->GetBinContent(HPrimaryBeta->FindBin(Event->GetPrimaryBetaGenerated())));
+        if(HPrimaryBeta->GetBinContent(HPrimaryBeta->FindBin(Event->GetPrimaryBetaGenerated())) == 0) AcceptanceScale = 0;
+    }else AcceptanceScale = 1;
+
+    int AngularRegion = -1;
+    for(unsigned int a = 0; a < CosZenithCut.size(); a++) if(Event->GetPrimaryMomentumDirectionGenerated().CosTheta() < CosZenithCut.at(a).first && Event->GetPrimaryMomentumDirectionGenerated().CosTheta() > CosZenithCut.at(a).second) AngularRegion = a;
+    if(AngularRegion < 0){RateScale = 0;}else{
+        RateScale = FluxScaleFactor*AcceptanceScale*GMuonTotalFluxUnscaled.at(AngularRegion)->Eval(Event->GetPrimaryBetaGenerated());
+    } //Don't bother if angular region wasn't found
+
+    return RateScale;
+}
+
+
+double RateScale_TOA(TChain*TreeSimulationParameter, int MainLoopScaleFactor, double StartingPlaneAcceptance, double BinWidthFactor, TH1D* HPrimaryBeta,  vector<pair<double, double>> CosZenithCut, vector<TGraph*> GParticleTotalFluxUnscaled, double FluxScaleFactor, const CEventRec* Event){
+    double AcceptanceScale;
+    double RateScale = 0;
+
+    if (TreeSimulationParameter != nullptr){
+        AcceptanceScale = MainLoopScaleFactor*StartingPlaneAcceptance/(BinWidthFactor*HPrimaryBeta->GetBinContent(HPrimaryBeta->FindBin(Event->GetPrimaryBetaGenerated())));
+        if(HPrimaryBeta->GetBinContent(HPrimaryBeta->FindBin(Event->GetPrimaryBetaGenerated())) == 0) AcceptanceScale = 0;
+    }else AcceptanceScale = 1;
+
+    int AngularRegion = -1;
+    for(unsigned int a = 0; a < CosZenithCut.size(); a++) if(Event->GetPrimaryMomentumDirectionGenerated().CosTheta() < CosZenithCut.at(a).first && Event->GetPrimaryMomentumDirectionGenerated().CosTheta() > CosZenithCut.at(a).second) AngularRegion = a;
+    RateScale = FluxScaleFactor*AcceptanceScale*GParticleTotalFluxUnscaled.at(AngularRegion)->Eval(Event->GetPrimaryBetaGenerated());
+
+    return RateScale;
+}

@@ -1,8 +1,10 @@
-//This code produces general beta histograms.
-//If you give any non-zero -r value it will check the file for event trigger IDs and sort into TRG 2 and TRG 4
+//Pretty simple Beta histograms (work for MC and ground/flight data both.)
+//This should be combined with BetaNoCuts, and no cuts should just be a parameter in the executable, like -c 0 or -c 1 for cuts vs no cuts.
+//Yeah let me go ahead and fix that next iteration.
+//This will eventually join BetaHisto
 
 //How to use:
-// /home/kelsey/GAPS_TrackerEnergyDep/build/BetaHisto -i /home/kelsey/simulations/simdat/flight/251221/v26.03/merged251221_0 -l 0.2 -u 1.8 -r 2 -o test
+// /home/kelsey/GAPS_TrackerEnergyDep/build/PrimaryBeta -i /home/kelsey/simulations/simdat/flight/251221/v26.03/merged251221_0 -l 0.2 -u 1.8 -r 4
 
 using namespace std;
 
@@ -29,8 +31,8 @@ parser->Parse();
 string reco_path = parser->GetOption<string>("in_path");
 string out_path = parser->GetOption<string>("out_file");
 cout << reco_path << endl;
-if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash!" << endl; out_path = out_path + '/'; }
-
+//sprintf(FilenameRoot,"%s/%s*.root",argv[1], argv[2]);
+//cout << argv[1] << endl;
 
 bool GEN = parser->GetOption<bool>("gen");
 int TRG = parser->GetOption<int>("TRG");
@@ -57,7 +59,7 @@ TreeRec->SetBranchAddress("Rec", &Event); //Set the branch address using Event (
 TreeRec->Add(FilenameRoot);
 
 int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
-double TrackerCut = 0.4; //Threshold for an energy deposition to be considered a hit
+double TrackerCut = 0.3; //Threshold for an energy deposition to be considered a hit
 
 //Prepare cuts:
 map<int, unsigned int> TofIndexVolumeIdMap;
@@ -67,12 +69,14 @@ ca::GPlottingTools Plotting;
 char text[400]; //This variable is used later to name the plots
 
 //What histogram would you like to plot here!!
-TH1D * HBeta = Plotting.DefineTH1D("HBeta",20, betacut, betahigh, "Reconstructed Beta", "entries", 10, 100000);
-TH1D * HBeta_NoTOFCuts = Plotting.DefineTH1D("HBeta_NoTOFCuts",20, betacut, betahigh, "Reconstructed Beta", "entries", 10, 100000);
-TH1D * H833PrimaryBeta = Plotting.DefineTH1D("H833PrimaryBeta",20, betacut, betahigh, "Reconstructed Primary Beta", "entries", 10, 100000);
+TH1D * HPrimaryBeta = Plotting.DefineTH1D("HPrimaryBeta",20, betacut, betahigh, "Reconstructed Primary Beta", "entries", 10, 100000);
+TH1D * HPrimaryBeta_NoTOFCuts = Plotting.DefineTH1D("HPrimaryBeta_NoTOFCuts",20, betacut, betahigh, "Reconstructed Primary Beta", "entries", 10, 100000);
 //Reconstructed beta vs generated beta for MC!
-TH1D * HGenB = Plotting.DefineTH1D("HGenB",20, betacut, 1, "Generated Beta", "entries", 10, 100000);
-TH2D * HRecB_vs_GenB= new TH2D("HRecB_vs_GenB","Rec_B vs Gen_Beta",50, betacut, 1,50, 0.1,1.5);
+TH1D * HGenPrimaryB = Plotting.DefineTH1D("HGenPrimaryB",20, betacut, 1, "Generated Primary Beta", "entries", 10, 100000);
+TH2D * HRecPrimaryB_vs_GenB= new TH2D("HRecPrimaryB_vs_GenB","Primary_Rec_B vs Gen_Beta",50, betacut, 1,50, 0.1,1.5);
+
+int bcounts = 0;
+int bcounts_noTOF = 0;
 
 //How many entries:
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
@@ -88,24 +92,24 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 		    cout << "Event number " << i << endl;
 	}
 
+CTrackRec* pt = Event->GetPrimaryTrack();
+	uint pt_index = 0;
+    for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
+
 	//Cuts are implemented in this chunk:
-	if(Event->GetNTracks() == 1){  //First select the single track event
+	if(pt != nullptr && (pt->GetChi2()/pt->GetNdof()) < 3.2 && ( (TRG == 0) || ((int)Event->GetTriggerSources().at(0) == TRG) ) && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
+
 	    int UMBflag = 0;
         int CORflag = 0;
         int CBEtopflag = 0;
         int CBEbotflag = 0;
         int CBEsideflag = 0;
 
-		CTrackRec* pt = Event->GetPrimaryTrack();
-		uint pt_index = 0;
-      	        for( ; pt_index < Event->GetNTracks(); pt_index++) if( Event->GetTrack(pt_index)->IsPrimary() ) break;
-
 		//Note downwards beta enforced by Event->GetPrimaryBeta() (should be positive) multiplied by Event->GetPrimaryMomentumDirection()[2] (z trajectory of particle)
 		//if(pt != nullptr && fabs(Event->GetPrimaryBetaGenerated()) >  betacut && fabs(Event->GetPrimaryBetaGenerated()) < betahigh){
 		//if(pt != nullptr && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) < betahigh){
-		if(pt != nullptr && (pt->GetChi2()/pt->GetNdof()) < 3.2 && ( (TRG == 0) || ( (int)Event->GetTriggerSources().at(0) == 2 || ( (int)Event->GetTriggerSources().at(0) == 4 ) ) ) && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) > -coslow && -fabs(Event->GetPrimaryMomentumDirection().CosTheta()) < -coshigh && Event->GetPrimaryBeta()*Event->GetPrimaryMomentumDirection()[2] < 0 && fabs(Event->GetPrimaryBeta()) >  betacut && fabs(Event->GetPrimaryBeta()) <  betahigh ){
 
-		HBeta_NoTOFCuts->Fill(Event->GetPrimaryBeta());
+		bcounts_noTOF++;
 
         //Reconstructed information, fortunately only one track.
         for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
@@ -120,39 +124,29 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
             //cout << "Rec: Hit " << isig << " Edep " << Event->GetTrack(0)->GetEnergyDeposition(isig) << " at " << VolumeId << endl;
         }
 
-        //If TRG = 0 (ground data, or MC?) OR if flight data track trigger is satisfied)
-        if( (TRG == 0 || (TRG != 0 && ((int)Event->GetTriggerSources().at(0) == 2)) ) && UMBflag > 0 && CBEtopflag > 0 && CBEbotflag > 0 ){
-			HBeta->Fill(Event->GetPrimaryBeta());
-			if(GEN) HGenB->Fill(Event->GetPrimaryBetaGenerated());
-			if(GEN) HRecB_vs_GenB->Fill(Event->GetPrimaryBetaGenerated(),Event->GetPrimaryBeta());
+        if(UMBflag > 0 && CBEtopflag > 0 /*&& CBEbotflag > 0*/ ){
+			HPrimaryBeta->Fill(Event->GetPrimaryBeta());
+			bcounts++;
+			if(GEN) HGenPrimaryB->Fill(Event->GetPrimaryBetaGenerated());
+			if(GEN) HRecPrimaryB_vs_GenB->Fill(Event->GetPrimaryBetaGenerated(),Event->GetPrimaryBeta());
         }
-
-        //If the TRG != 0 (this means it's not MC) AND 833 trigger is satisfied
-        if ( (TRG != 0 && ((int)Event->GetTriggerSources().at(0) == 4) ) && UMBflag > 0 && CBEtopflag > 0 ){
-            H833PrimaryBeta->Fill(Event->GetPrimaryBeta());
-        }
-
 
 		} //Closed bracket for event level cut
 
-	} //Closed bracket for single track cut
-
 }  //Closed bracket for iteration through tree events, move on to the next event i
 
-//cout << bcounts << endl;
-//cout << HBeta->GetEntries() << endl; //Those ended up being the same obviously
-HBeta->SetMaximum(HBeta->GetEntries());
-HBeta_NoTOFCuts->SetMaximum(HBeta_NoTOFCuts->GetEntries());
-H833PrimaryBeta->SetMaximum(H833PrimaryBeta->GetEntries());
+cout << bcounts << endl;
+HPrimaryBeta->SetMaximum(bcounts);
+//HPrimaryBeta_NoTOFCuts->SetMaximum(bcounts_noTOF);
 
+//HGenB->Scale(1.0 / HGenB->Integral(), "width");
 
 //Histogram section
 //-------------------------------------
-if(GEN) histplot2d("c1",HRecB_vs_GenB,"Rec_B versus Gen_B","Generated Beta", "Reconstructed Beta","NEntries", out_path + "Cuts_BothgenBRecB_TRG" + to_string(TRG) );
-if(GEN) histplot1d("c2",HGenB,"Gen_B","Generated Beta","NEntries", out_path + "Cuts_GenB_TRG" + to_string(TRG) );
-histplot1d("c3",HBeta,"Reconstructed B","Reconstructed Beta","NEntries", out_path + "Cuts_Rec_B_TRG2" );
-histplot1d("c4",HBeta_NoTOFCuts,"Reconstructed B No TOF Cuts","Reconstructed Beta","NEntries", out_path + "NoTofCuts_Rec_B_TRG" + to_string(TRG) );
-histplot1d("c5",H833PrimaryBeta,"Reconstructed Primary B, 833 TRG","Reconstructed Primary Beta","NEntries", out_path + "Cuts_Rec_Pri_B_TRG4" );
+if(GEN) histplot2d("c1",HRecPrimaryB_vs_GenB,"Rec_B versus Gen_B","Generated Beta", "Reconstructed Beta","NEntries", out_path + "Cuts_BothgenBRecPrimaryB_TRG" + to_string(TRG) );
+if(GEN) histplot1d("c2",HGenPrimaryB,"Gen_B","Generated Beta","NEntries", out_path + "Cuts_GenPrimaryB_TRG" + to_string(TRG) );
+histplot1d("c3",HPrimaryBeta,"Reconstructed Primary B","Reconstructed Primary Beta","NEntries", out_path + "Cuts_Rec_Pri_B_TRG" + to_string(TRG) );
+//histplot1d("c4",HPrimaryBeta_NoTOFCuts,"Reconstructed Primary B No TOF Cuts","Reconstructed Primary Beta","NEntries", out_path + "NoTofCuts_Rec_Pri_B_TRG" + to_string(TRG) );
 
 cout << endl << "I am done" << endl;
 

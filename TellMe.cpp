@@ -25,11 +25,13 @@ parser->AddCommandLineOption<int>("event", "specific event", 0, "e");
 parser->AddCommandLineOption<bool>("MC_truth", "specific event", 0, "m");
 parser->AddCommandLineOption<bool>("dEdx", "specific event", 0, "x");
 parser->AddCommandLineOption<bool>("Edep", "specific event", 0, "p");
+parser->AddCommandLineOption<bool>("reco_info", "reconstruction info", 0, "r");
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
 string reco_path = parser->GetOption<string>("in_path");
+bool RECO = parser->GetOption<bool>("reco_info");
 bool EDEP = parser->GetOption<bool>("Edep");
 bool MC = parser->GetOption<bool>("MC_truth");
 bool DEDX = parser->GetOption<bool>("dEdx");
@@ -153,11 +155,17 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
         }
     }*/
 
-    //Tell me about the dE/dx of all tracks where dE/dx = Energy deposit / (rho_tkr/tof * length traveled through detector  )
-    //Length traveled through flat detector (Si(Li), CBE_top,bot, UMB) = L_tof/tkr / cos(theta)
-    //Length traveled through vertical detector CBE_sides, COR = L_tof/tkr / sqrt(1 - sin^2(theta)
+    //Reco information (which reconstruction used?)
+    if(RECO){
+        cout << "Trigger source of event: " << (int)Event->GetTriggerSources().at(0) << endl;
+        cout << "Reconstruction used: " << Event->GetActiveReconstruction() << endl;
+    }
 
     if(DEDX || EDEP){
+
+        //Tell me about the dE/dx of all tracks where dE/dx = Energy deposit / (rho_tkr/tof * length traveled through detector  )
+        //Length traveled through flat detector (Si(Li), CBE_top,bot, UMB) = L_tof/tkr / cos(theta)
+        //Length traveled through vertical detector CBE_sides, COR = L_tof/tkr / sqrt(1 - cos^2(theta))
 
     for(uint t = 0; t < Event->GetNTracks(); t++){
         cout << "Track is " << t << endl;
@@ -165,7 +173,9 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
         //cout << "Primary Track Momentum Direction is " << Event->GetPrimaryMomentumDirection()<< endl;
         //cout << "Primary: Cos(Theta) is " << Event->GetPrimaryMomentumDirection().CosTheta() << endl;
         //cout << "Track: " << t << " Momentum Direction[0] is " << Event->GetTrack(t)->GetMomentumDirection()[0] << endl;
-        //cout << "Track: " << t << " Momentum Direction[0][2] " << Event->GetTrack(t)->GetMomentumDirection()[0][2] << endl;
+        cout << "Track: " << t << " Momentum Direction[0][0] " << Event->GetTrack(t)->GetMomentumDirection()[0][0] << endl;
+        cout << "Track: " << t << " Momentum Direction[0][1] " << Event->GetTrack(t)->GetMomentumDirection()[0][1] << endl;
+        cout << "Track: " << t << " Momentum Direction[0][2] " << Event->GetTrack(t)->GetMomentumDirection()[0][2] << endl;
 
         float costheta = fabs(Event->GetTrack(t)->GetMomentumDirection()[0][2]);
 

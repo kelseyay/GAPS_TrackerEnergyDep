@@ -1,5 +1,8 @@
 //To run, do /home/kelsey/GAPS_TrackerEnergyDep/build/HoursOccu -i /home/kelsey/simulations/simdat/flight/251221/FPSI/starlink251221_0
 
+//After this project exploded into what it is now, I really should have used an array of histograms, maybe one for each section, like:
+//  HCOR[4] rip but it's fine.
+
 using namespace std;
 
 #include "KYtools.C"
@@ -9,20 +12,22 @@ namespace ca = Crane::Analysis;
 namespace cl = Crane::Common;
 //using Crane::Calibration;
 
-void format_hist2d(TH2D* h1, string title, string xtitle, string ytitle, string ztitle){
-        h1->SetTitle(title.c_str());
-        h1->GetXaxis()->SetTitle(xtitle.c_str());
-        h1->GetYaxis()->SetTitle(ytitle.c_str());
-        h1->GetZaxis()->SetTitle(ztitle.c_str());
-        gPad->SetLogz();
+void format_hist2d(TH2D* h1, string title, string xtitle, string ytitle, string ztitle, int zsc){
+    h1->GetZaxis()->SetRangeUser(2,h1->GetEntries()/zsc);
+    h1->SetTitle(title.c_str());
+    h1->SetBit(TH1::kNoStats);
+    h1->GetXaxis()->SetTitle(xtitle.c_str());
+    h1->GetYaxis()->SetTitle(ytitle.c_str());
+    h1->GetZaxis()->SetTitle(ztitle.c_str());
 }
 
-void format_hist2f(TH2F* h1, string title, string xtitle, string ytitle, string ztitle){
-        h1->SetTitle(title.c_str());
-        h1->GetXaxis()->SetTitle(xtitle.c_str());
-        h1->GetYaxis()->SetTitle(ytitle.c_str());
-        h1->GetZaxis()->SetTitle(ztitle.c_str());
-        gPad->SetLogz();
+void format_histplot2f(TH2F* h1, string title, string xtitle, string ytitle, string ztitle){
+    h1->SetTitle(title.c_str());
+    h1->SetBit(TH1::kNoStats);
+    h1->GetXaxis()->SetTitle(xtitle.c_str());
+    h1->GetYaxis()->SetTitle(ytitle.c_str());
+    h1->GetZaxis()->SetTitle(ztitle.c_str());
+
 }
 
 void format_pad(TCanvas * c1, int i){
@@ -90,20 +95,20 @@ int Hlen = Npaddles*3;
 
 //2D Histos
 //Currently just two histograms, one for Umbrella, one for CBE
-TH2D* HTofUMBOccu = Plotting.DefineTH2D("HTofUMBOccu", 168, -2000, 2000, 168, -2000, 2000, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 2, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
-TH2D* HTofCBEtopOccu = Plotting.DefineTH2D("HTofCBEtopOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
-TH2D* HTofCBEbotOccu = Plotting.DefineTH2D("HTofCBEbotOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
-TH2D* HTofCBEtopOccu_test = Plotting.DefineTH2D("HTofCBEtopOccu_test", Hlen, 0, Hlen,  Hlen, 0, Hlen, "CBE Top Panel X Span", "CBE Top Panel Y Span", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor));
+TH2D* HTofUMBOccu = Plotting.DefineTH2D("HTofUMBOccu", 168, -2000, 2000, 168, -2000, 2000, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 2, 10000);
+TH2D* HTofCBEtopOccu = Plotting.DefineTH2D("HTofCBEtopOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 10, 10000);
+TH2D* HTofCBEbotOccu = Plotting.DefineTH2D("HTofCBEbotOccu", 25, -937.5, 937.5, 25, -937.5, 937.5, "rec. hit position x [mm]", "rec. hit position y [mm]", "events", 10, 10000);
+TH2D* HTofCBEtopOccu_test = Plotting.DefineTH2D("HTofCBEtopOccu_test", Hlen, 0, Hlen,  Hlen, 0, Hlen, "CBE Top Panel X Span", "CBE Top Panel Y Span", "events", 10, 10000);
 
-TH2D* HTofCOR_XOccu = Plotting.DefineTH2D("HTofCOR_XOccu", 50, -1200, 1200, 49, -175, 1540, "rec. hit position y [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
-TH2D* HTofCOR_min_XOccu = Plotting.DefineTH2D("HTofCOR_min_XOccu", 50, -1200, 1200, 49, -175, 1540, "rec. hit position y [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
-TH2D* HTofCOR_YOccu = Plotting.DefineTH2D("HTofCOR_YOccu", 50, -1200, 1200, 49, -175, 1540, "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
-TH2D* HTofCOR_min_YOccu = Plotting.DefineTH2D("HTofCOR_min_YOccu", 50, -1200, 1200, 49, -175, 1540, "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
+TH2D* HTofCOR_XOccu = Plotting.DefineTH2D("HTofCOR_XOccu", 50, -1200, 1200, 49, -175, 1540, "rec. hit position y [mm]", "rec. hit position z [mm]", "events", 10, 10000);
+TH2D* HTofCOR_min_XOccu = Plotting.DefineTH2D("HTofCOR_min_XOccu", 50, -1200, 1200, 49, -175, 1540, "rec. hit position y [mm]", "rec. hit position z [mm]", "events", 10, 10000);
+TH2D* HTofCOR_YOccu = Plotting.DefineTH2D("HTofCOR_YOccu", 50, -1200, 1200, 49, -175, 1540, "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, 10000);
+TH2D* HTofCOR_min_YOccu = Plotting.DefineTH2D("HTofCOR_min_YOccu", 50, -1200, 1200, 49, -175, 1540, "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, 10000);
 
-TH2D* HTofCBE_XOccu = Plotting.DefineTH2D("HTofCBE_XOccu", 20, -800, 800, 36, -120, 1300, "rec. hit position y [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
-TH2D* HTofCBE_min_XOccu = Plotting.DefineTH2D("HTofCBE_min_XOccu", 20, -800, 800, 36, -120, 1300, "rec. hit position y [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
-TH2D* HTofCBE_YOccu = Plotting.DefineTH2D("HTofCBE_YOccu", 20, -800, 800, 36, -120, 1300,  "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
-TH2D* HTofCBE_min_YOccu = Plotting.DefineTH2D("HTofCBE_min_YOccu", 20, -800, 800, 36, -120, 1300,  "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, TreeRec->GetEntries()/(MainLoopScaleFactor*zsc));
+TH2D* HTofCBE_XOccu = Plotting.DefineTH2D("HTofCBE_XOccu", 20, -800, 800, 36, -120, 1300, "rec. hit position y [mm]", "rec. hit position z [mm]", "events", 10, 10000);
+TH2D* HTofCBE_min_XOccu = Plotting.DefineTH2D("HTofCBE_min_XOccu", 20, -800, 800, 36, -120, 1300, "rec. hit position y [mm]", "rec. hit position z [mm]", "events", 10, 10000);
+TH2D* HTofCBE_YOccu = Plotting.DefineTH2D("HTofCBE_YOccu", 20, -800, 800, 36, -120, 1300,  "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, 10000);
+TH2D* HTofCBE_min_YOccu = Plotting.DefineTH2D("HTofCBE_min_YOccu", 20, -800, 800, 36, -120, 1300,  "rec. hit position x [mm]", "rec. hit position z [mm]", "events", 10, 10000);
 
 //auto hcol21 = new TH2F("hcol21","MPV Full Tracker",nrows*nstrips,0,nrows*nstrips,nlayers*nmods,0,nlayers*nmods);
 auto hnentries = new TH2F("hnentries","Full Tracker Strip-Level NHits",nrows*nstrips,0,nrows*nstrips,nlayers*nmods,0,nlayers*nmods);
@@ -161,31 +166,19 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
             time_previous = time_thisstep;
             cout << time << endl;
 
-            HTofUMBOccu->SetMaximum(HTofUMBOccu->GetEntries()/1000);
-            HTofCBEtopOccu->SetMaximum(HTofCBEtopOccu->GetEntries()/100);
-            HTofCBEbotOccu->SetMaximum(HTofCBEbotOccu->GetEntries()/100);
-            HTofCOR_XOccu->SetMaximum(HTofCOR_XOccu->GetEntries()/100);
-            HTofCOR_min_XOccu->SetMaximum(HTofCOR_min_XOccu->GetEntries()/100);
-            HTofCOR_YOccu->SetMaximum(HTofCOR_YOccu->GetEntries()/100);
-            HTofCOR_min_YOccu->SetMaximum(HTofCOR_min_YOccu->GetEntries()/100);
-            HTofCBE_XOccu->SetMaximum(HTofCBE_XOccu->GetEntries()/100);
-            HTofCBE_min_XOccu->SetMaximum(HTofCBE_min_XOccu->GetEntries()/100);
-            HTofCBE_YOccu->SetMaximum(HTofCBE_YOccu->GetEntries()/100);
-            HTofCBE_min_YOccu->SetMaximum(HTofCBE_min_YOccu->GetEntries()/100);
+            format_histplot2f(hnentries,"Tracker " + time,"row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries");
+            format_hist2d(HTofUMBOccu,"UMB " + time,"X Location [cm]","Y Location [cm]","NEntries",1000);
+            format_hist2d(HTofCBEtopOccu,"CBEtop " + time,"X Location [cm]","Y Location [cm]","NEntries",100);
+            format_hist2d(HTofCBEbotOccu,"CBEbot " + time,"X Location [cm]","Y Location [cm]","NEntries",100);
+            format_hist2d(HTofCOR_XOccu,"COR +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
+            format_hist2d(HTofCOR_min_XOccu,"COR -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
+            format_hist2d(HTofCOR_YOccu,"COR +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
+            format_hist2d(HTofCOR_min_YOccu,"COR -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
 
-            histplot2f("ctkr"+to_string(hour_flag),hnentries,"Tracker " + time,"row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries",out_path+pfx+"TrackerEntries");
-            histplot2d("cumb"+to_string(hour_flag),HTofUMBOccu,"UMB " + time,"X Location [cm]","Y Location [cm]","NEntries",out_path+pfx+"TofUmbOccu"+T2.AsString("s"));
-            histplot2d("ccbetop"+to_string(hour_flag),HTofCBEtopOccu,"CBEtop " + time,"X Location [cm]","Y Location [cm]","NEntries",out_path+pfx+"TofCBEtopOccu"+T2.AsString("s"));
-            histplot2d("ccbebot"+to_string(hour_flag),HTofCBEbotOccu,"CBEbot " + time,"X Location [cm]","Y Location [cm]","NEntries",out_path+pfx+"TofCBEbotOccu"+T2.AsString("s"));
-            histplot2d("ccorx"+to_string(hour_flag),HTofCOR_XOccu,"COR +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_XOccu"+T2.AsString("s"));
-            histplot2d("ccormx"+to_string(hour_flag),HTofCOR_min_XOccu,"COR -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_min_XOccu"+T2.AsString("s"));
-            histplot2d("ccory"+to_string(hour_flag),HTofCOR_YOccu,"COR +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_YOccu"+T2.AsString("s"));
-            histplot2d("ccormy"+to_string(hour_flag),HTofCOR_min_YOccu,"COR -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_min_YOccu"+T2.AsString("s"));
-
-            histplot2d("ccbex"+to_string(hour_flag),HTofCBE_XOccu,"CBE +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_XOccu"+T2.AsString("s"));
-            histplot2d("ccbemx"+to_string(hour_flag),HTofCBE_min_XOccu,"CBE -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_min_XOccu"+T2.AsString("s"));
-            histplot2d("ccbey"+to_string(hour_flag),HTofCBE_YOccu,"CBE +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_YOccu"+T2.AsString("s"));
-            histplot2d("ccbemy"+to_string(hour_flag),HTofCBE_min_YOccu,"CBE -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_min_YOccu"+T2.AsString("s"));
+            format_hist2d(HTofCBE_XOccu,"CBE +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
+            format_hist2d(HTofCBE_min_XOccu,"CBE -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
+            format_hist2d(HTofCBE_YOccu,"CBE +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
+            format_hist2d(HTofCBE_min_YOccu,"CBE -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
 
             //format_hist2f(hnentries,"Full Tracker Strip Level NHits","row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries");
 
@@ -369,33 +362,20 @@ T2 = Event->GetEventTime();
 string time_thisstep = T2.AsString("s");
 string time = time_previous + " to " + time_thisstep.substr(time_thisstep.length() - 8);
 
-HTofUMBOccu->SetMaximum(HTofUMBOccu->GetEntries()/1000);
-HTofCBEtopOccu->SetMaximum(HTofCBEtopOccu->GetEntries()/100);
-HTofCBEbotOccu->SetMaximum(HTofCBEbotOccu->GetEntries()/100);
-HTofCOR_XOccu->SetMaximum(HTofCOR_XOccu->GetEntries()/100);
-HTofCOR_min_XOccu->SetMaximum(HTofCOR_min_XOccu->GetEntries()/100);
-HTofCOR_YOccu->SetMaximum(HTofCOR_YOccu->GetEntries()/100);
-HTofCOR_min_YOccu->SetMaximum(HTofCOR_min_YOccu->GetEntries()/100);
-HTofCBE_XOccu->SetMaximum(HTofCBE_XOccu->GetEntries()/100);
-HTofCBE_min_XOccu->SetMaximum(HTofCBE_min_XOccu->GetEntries()/100);
-HTofCBE_YOccu->SetMaximum(HTofCBE_YOccu->GetEntries()/100);
-HTofCBE_min_YOccu->SetMaximum(HTofCBE_min_YOccu->GetEntries()/100);
-
 cout << time << endl;
-histplot2f("ctkr"+to_string(nhours),hnentries,"Tracker " + time,"row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries",out_path+pfx+"TrackerEntries");
-histplot2d("cumb"+to_string(nhours),HTofUMBOccu,"UMB " + time,"X Location [cm]","Y Location [cm]","NEntries",out_path+pfx+"TofUmbOccu"+T2.AsString("s"));
-histplot2d("ccbetop"+to_string(nhours),HTofCBEtopOccu,"CBEtop " + time,"X Location [cm]","Y Location [cm]","NEntries",out_path+pfx+"TofCBEtopOccu"+T2.AsString("s"));
-histplot2d("ccbebot"+to_string(nhours),HTofCBEbotOccu,"CBEbot " + time,"X Location [cm]","Y Location [cm]","NEntries",out_path+pfx+"TofCBEbotOccu"+T2.AsString("s"));
-histplot2d("ccorx"+to_string(nhours),HTofCOR_XOccu,"COR +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_XOccu"+T2.AsString("s"));
-histplot2d("ccormx"+to_string(nhours),HTofCOR_min_XOccu,"COR -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_min_XOccu"+T2.AsString("s"));
-histplot2d("ccory"+to_string(nhours),HTofCOR_YOccu,"COR +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_YOccu"+T2.AsString("s"));
-histplot2d("ccormy"+to_string(nhours),HTofCOR_min_YOccu,"COR -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCOR_min_YOccu"+T2.AsString("s"));
+format_histplot2f(hnentries,"Tracker " + time,"row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries");
+format_hist2d(HTofUMBOccu,"UMB " + time,"X Location [cm]","Y Location [cm]","NEntries",1000);
+format_hist2d(HTofCBEtopOccu,"CBEtop " + time,"X Location [cm]","Y Location [cm]","NEntries",100);
+format_hist2d(HTofCBEbotOccu,"CBEbot " + time,"X Location [cm]","Y Location [cm]","NEntries",100);
+format_hist2d(HTofCOR_XOccu,"COR +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
+format_hist2d(HTofCOR_min_XOccu,"COR -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
+format_hist2d(HTofCOR_YOccu,"COR +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
+format_hist2d(HTofCOR_min_YOccu,"COR -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
 
-histplot2d("ccbex"+to_string(nhours),HTofCBE_XOccu,"CBE +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_XOccu"+T2.AsString("s"));
-histplot2d("ccbemx"+to_string(nhours),HTofCBE_min_XOccu,"CBE -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_min_XOccu"+T2.AsString("s"));
-histplot2d("ccbey"+to_string(nhours),HTofCBE_YOccu,"CBE +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_YOccu"+T2.AsString("s"));
-histplot2d("ccbemy"+to_string(nhours),HTofCBE_min_YOccu,"CBE -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",out_path+pfx+"TofCBE_min_YOccu"+T2.AsString("s"));
-
+format_hist2d(HTofCBE_XOccu,"CBE +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
+format_hist2d(HTofCBE_min_XOccu,"CBE -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
+format_hist2d(HTofCBE_YOccu,"CBE +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
+format_hist2d(HTofCBE_min_YOccu,"CBE -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
 //format_hist2f(hnentries,"Full Tracker Strip Level NHits","row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries");
 
 //new TCanvas(Form("c%d", i), Form("Canvas %d", i), 200 + i*50, 200 + i*50, 600, 400);

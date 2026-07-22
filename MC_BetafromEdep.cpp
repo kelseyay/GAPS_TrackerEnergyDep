@@ -28,7 +28,7 @@ float Ltof = 0.635;
 float rtof = 1.032;
 float iontof = (0.000016 * pow(Ztof,0.9));
 
-float z = 1;
+float z = 2;
 float Ztkr = 14;
 float Atkr = 28;
 float rtkr = 2.33; //Density g/cm^2
@@ -157,6 +157,7 @@ TH2D * HRecB_vs_GenB = new TH2D("HRecB_vs_GenB","Rec_Beta vs Gen_Beta",50,betacu
 TH2D * HProxB_vs_GenB = new TH2D("HProxB_vs_GenB","Prox_B vs Gen_Beta",50, betacut - 0.1, betahigh + 0.1, 50, 0.1, 1);
 TH2D * HRecB_vs_ProxB = new TH2D("HRecB_vs_ProxB","Rec_Beta vs Prox_B",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 1);
 
+TH1F * HBetaGen_Weight_noTOFcuts = new TH1F("HBetaGen_Weight_noTOFcuts","HBetaGen_Weight_noTOFcuts",40, betacut, betahigh);
 TH1F * HBetaGen_Weight = new TH1F("HBetaGen_Weight","HBetaGen_Weight",40, betacut, betahigh);
 TH1F * HBetaProxy_Weight = new TH1F("HBetaProxy_Weight","HBetaProx_Weight",40, betacut, betahigh);
 TH1F * HBetaRec_Weight = new TH1F("HBetaRec_Weight","HBetaRec_Weight",40, betacut, betahigh);
@@ -193,10 +194,13 @@ CosZenithCut.push_back(make_pair(-0.25, -0.5));
 CosZenithCut.push_back(make_pair(0, -0.25));
 
 vector<TGraph*> GMuonTotalFluxUnscaled;
-GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.875"), 0.1057));
-GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.625"), 0.1057));
-GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.375"), 0.1057));
-GMuonTotalFluxUnscaled.push_back(Plotting.ConvertEnergyFluxToBetaFlux(Plotting.GetTH1D(getenv("GAPS") + string("/resources/fluxes/total_fluxes_coszenith_100_m_-13_antarctica.root"), "c6a", "p_total_altitude_zenith_energy_0.125"), 0.1057));
+GMuonTotalFluxUnscaled = MC_weighting_framework_muon(GMuonTotalFluxUnscaled);
+
+vector<TGraph*> GProtonTotalFluxUnscaled;
+GProtonTotalFluxUnscaled = MC_weighting_framework_proton(GProtonTotalFluxUnscaled);
+
+vector<TGraph*> GAlphaTotalFluxUnscaled;
+GAlphaTotalFluxUnscaled = MC_weighting_framework_alpha(GAlphaTotalFluxUnscaled);
 
 CAnalysisManager AnalysisManagerRec;
 AnalysisManagerRec.SetGSimulationParameterTChain(TreeSimulationParameter);
@@ -244,29 +248,14 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 			//double gamma = sqrt( 1/(1 - pow(Bgen,2)) );
 			//cout << "Bgen " << Bgen << endl;
 
+			//cout << "Particle spec is " << MCEvent->GetTrack(0)->GetPdg() << endl;
             double RateScale = 0;
             if( MC_Weight ){
-                //Theoretically save on compute time if put weighting stuff at last possible place.
-                double AcceptanceScale;
-                if (TreeSimulationParameter != nullptr){
-                    //acceptance scaling factor based on beta of the primary
-                    AcceptanceScale = MainLoopScaleFactor*StartingPlaneAcceptance/(BinWidthFactor*HPrimaryBeta->GetBinContent(HPrimaryBeta->FindBin(Event->GetPrimaryBetaGenerated())));
-
-                    if(HPrimaryBeta->GetBinContent(HPrimaryBeta->FindBin(Event->GetPrimaryBetaGenerated())) == 0) AcceptanceScale = 0;
-                    //Find the bin associated with the generated beta in the vector, see if it doesn't exist?
-                }else AcceptanceScale = 1; //Set it = to 1 if there's a nullptr? That's a surprise...
-                //cout << "AcceptanceScale = " << AcceptanceScale << endl;
-
-           	    int AngularRegion = -1;
-                for(unsigned int a = 0; a < CosZenithCut.size(); a++) if(Event->GetPrimaryMomentumDirectionGenerated().CosTheta() < CosZenithCut.at(a).first && Event->GetPrimaryMomentumDirectionGenerated().CosTheta() > CosZenithCut.at(a).second) AngularRegion = a;
-                //This is just checking which "bin" the generated cos(theta) is in
-                if(AngularRegion < 0) continue; //Don't bother if angular region wasn't found
-                RateScale = FluxScaleFactor*AcceptanceScale*GMuonTotalFluxUnscaled.at(AngularRegion)->Eval(Event->GetPrimaryBetaGenerated());
-                //cout << "Beta? = " << Event->GetPrimaryBetaGenerated() << endl;
-                //cout << "Angle? = " << Event->GetPrimaryMomentumDirectionGenerated().CosTheta() << endl;
-                //cout << "RateScale?? = " << RateScale << endl;
-
+                if(MCEvent->GetTrack(0)->GetPdg() == 13) RateScale = RateScale_muon(TreeSimulationParameter, MainLoopScaleFactor, StartingPlaneAcceptance, BinWidthFactor, HPrimaryBeta, CosZenithCut, GMuonTotalFluxUnscaled, FluxScaleFactor, Event);
+                if(MCEvent->GetTrack(0)->GetPdg() == 2212) FluxScaleFactor = 1;  RateScale = RateScale_TOA(TreeSimulationParameter, MainLoopScaleFactor, StartingPlaneAcceptance, BinWidthFactor, HPrimaryBeta, CosZenithCut, GProtonTotalFluxUnscaled, FluxScaleFactor, Event);
+                if(MCEvent->GetTrack(0)->GetPdg() == 1000020040) FluxScaleFactor = 1;  RateScale = RateScale_TOA(TreeSimulationParameter, MainLoopScaleFactor, StartingPlaneAcceptance, BinWidthFactor, HPrimaryBeta, CosZenithCut, GAlphaTotalFluxUnscaled, FluxScaleFactor, Event);
             }
+            HBetaGen_Weight_noTOFcuts->Fill(MCEvent->GetPrimaryBeta(),RateScale);
 
 			for(uint isig=0; isig<Event->GetTrack(0)->GetEnergyDeposition().size(); isig++){
                 unsigned int VolumeId  = Event->GetTrack(0)->GetVolumeId(isig); //Check the VolumeId of the event
@@ -361,7 +350,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
                             //Weighted MC filling below
 
-                            if(MC_Weight && RateScale < 1){
+                            if(MC_Weight){
                                 bcounts_Weight = bcounts_Weight+RateScale;
                                 HBetaGen_Weight->Fill(Event->GetPrimaryBetaGenerated(),RateScale);
                                 HBetaProxy_Weight->Fill(TrBP,RateScale);
@@ -396,15 +385,21 @@ histplot1d("c3",HBetaProxy,"Proxy Beta","Proxy Beta","NEntries", out_path + "Bet
 histplot1d("c4",HBetaGen,"Generated Beta","Generated Beta","NEntries", out_path + "BetaGen"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
 histplot1d("c5",HBetaRec,"Reconstructed Beta","Reconstructed Beta","NEntries", out_path + "BetaRec " + "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
 
+HBetaProxy_Weight->Scale( 1./HBetaProxy_Weight->Integral(),"WIDTH");
+HBetaProxy_Weight->SetMinimum(4e-2);
+HBetaProxy_Weight->SetMaximum(8);
 HBetaGen_Weight->SetMaximum(bcounts_Weight);
-HBetaProxy_Weight->SetMaximum(bcounts_Weight);
 HBetaRec_Weight->SetMaximum(bcounts_Weight);
-HBetaGen_Weight->SetMinimum(10e-4);
-HBetaProxy_Weight->SetMinimum(10e-4);
-HBetaRec_Weight->SetMinimum(10e-4);
+HBetaGen_Weight->SetMinimum(1);
+HBetaRec_Weight->SetMinimum(1);
+HBetaGen_Weight_noTOFcuts->SetMaximum(bcounts_Weight*100);
+HBetaGen_Weight_noTOFcuts->SetMinimum(1);
+
 histplot1f("c6",HBetaGen_Weight,"Generated Beta Weighted","Generated Beta Weighted","NEntries", out_path + "Weighted_BetaGen"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
 histplot1f("c7",HBetaProxy_Weight,"Proxy Beta Weighted","Proxy Beta Weighted","NEntries", out_path + "Weighted_BetaProx"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
 histplot1f("c8",HBetaRec_Weight,"Reconstructed Beta Weighted","Reconstructed Beta Weighted","NEntries", out_path + "Weighted_BetaRec"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
+histplot1f("c9",HBetaGen_Weight_noTOFcuts,"Generated Beta Weighted (No TOF Cuts)","Generated Beta Weighted","NEntries", out_path + "Weighted_BetaGen_NoTOFCuts"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
+
 
 myfile.open(out_path + txtname,std::ios::app);
 myfile << "Total Events/Mainscale Factor " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
@@ -419,3 +414,28 @@ cout << endl << "I am done" << endl;
 return 1;
 
 }
+
+
+
+/*
+//Theoretically save on compute time if put weighting stuff at last possible place.
+double AcceptanceScale;
+if (TreeSimulationParameter != nullptr){
+    //acceptance scaling factor based on beta of the primary
+    AcceptanceScale = MainLoopScaleFactor*StartingPlaneAcceptance/(BinWidthFactor*HPrimaryBeta->GetBinContent(HPrimaryBeta->FindBin(Event->GetPrimaryBetaGenerated())));
+
+    if(HPrimaryBeta->GetBinContent(HPrimaryBeta->FindBin(Event->GetPrimaryBetaGenerated())) == 0) AcceptanceScale = 0;
+    //Find the bin associated with the generated beta in the vector, see if it doesn't exist?
+}else AcceptanceScale = 1; //Set it = to 1 if there's a nullptr? That's a surprise...
+//cout << "AcceptanceScale = " << AcceptanceScale << endl;
+
+int AngularRegion = -1;
+for(unsigned int a = 0; a < CosZenithCut.size(); a++) if(Event->GetPrimaryMomentumDirectionGenerated().CosTheta() < CosZenithCut.at(a).first && Event->GetPrimaryMomentumDirectionGenerated().CosTheta() > CosZenithCut.at(a).second) AngularRegion = a;
+//This is just checking which "bin" the generated cos(theta) is in
+if(AngularRegion < 0) continue; //Don't bother if angular region wasn't found
+RateScale = FluxScaleFactor*AcceptanceScale*GMuonTotalFluxUnscaled.at(AngularRegion)->Eval(Event->GetPrimaryBetaGenerated());
+//cout << "Beta? = " << Event->GetPrimaryBetaGenerated() << endl;
+//cout << "Angle? = " << Event->GetPrimaryMomentumDirectionGenerated().CosTheta() << endl;
+cout << "RateScale?? = " << RateScale << endl;
+cout << "RateScale from KYTools = " << RateScale_muon(TreeSimulationParameter, MainLoopScaleFactor, StartingPlaneAcceptance, BinWidthFactor, HPrimaryBeta, CosZenithCut, GMuonTotalFluxUnscaled, FluxScaleFactor, Event) << endl;
+*/
