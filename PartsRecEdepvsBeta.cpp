@@ -33,6 +33,7 @@ parser->AddCommandLineOption<int>("bbins", "number of beta bins",4,"b");
 parser->AddCommandLineOption<int>("cbins", "number of cos(theta) bins",2,"t");
 parser->AddCommandLineOption<int>("TRG", "Which trigger?",0,"r");
 parser->AddCommandLineOption<bool>("MC_Weighting", "Monte Carlo Weighting on or off?",0,"w");
+parser->AddCommandLineOption<int>("MainloopScale", "Main loop scale factor",1,"m");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
@@ -77,7 +78,7 @@ TChain * TreeRec = new TChain("TreeRec"); //New TreeRec Tchain object (this is n
 TreeRec->SetBranchAddress("Rec", &Event); //Set the branch address using Event (defined above)
 TreeRec->Add(FilenameRoot);
 
-int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
+int MainLoopScaleFactor = parser->GetOption<int>("MainloopScale");
 double TrackerCut = 0.4; //Threshold for an energy deposition to be considered a hit
 double TofCut = 0.1;
 

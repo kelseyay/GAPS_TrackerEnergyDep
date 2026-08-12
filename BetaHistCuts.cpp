@@ -24,6 +24,7 @@ parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.8,"l");
 parser->AddCommandLineOption<double>("beta_high", "upper Beta Cut",1,"u");
 parser->AddCommandLineOption<bool>("gen", "generated beta plots",0,"g");
 parser->AddCommandLineOption<int>("TRG", "Which trigger?",0,"r");
+parser->AddCommandLineOption<int>("MainloopScale", "Main loop scale factor",1,"m");
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
@@ -34,6 +35,7 @@ cout << reco_path << endl;
 if(out_path != "" && out_path[out_path.length()-1] != '/' ){ cout <<  "out path no slash!" << endl; out_path = out_path + '/'; }
 
 
+int MainLoopScaleFactor = parser->GetOption<int>("MainloopScale");
 bool GEN = parser->GetOption<bool>("gen");
 int TRG = parser->GetOption<int>("TRG");
 
@@ -58,7 +60,6 @@ TChain * TreeRec = new TChain("TreeRec"); //New TreeRec Tchain object (this is n
 TreeRec->SetBranchAddress("Rec", &Event); //Set the branch address using Event (defined above)
 TreeRec->Add(FilenameRoot);
 
-int MainLoopScaleFactor = 1; //Set this number to scale the step size. Larger means runs faster and fewer events
 double TrackerCut = 0.4; //Threshold for an energy deposition to be considered a hit
 
 //Prepare cuts:

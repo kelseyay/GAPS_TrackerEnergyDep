@@ -156,7 +156,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 		    cout << "Event number " << i << endl;
 		}
 
-        if(Hour != hour_flag){
+        if(Hour > hour_flag){
             cout << "hour_flag " << hour_flag << endl;
             TreeRec->GetEntry(i-10);
             TTimeStamp T_hourend(Event->GetEventTime());
