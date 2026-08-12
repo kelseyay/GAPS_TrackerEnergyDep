@@ -61,8 +61,13 @@ TF1 *Z1_tkr_Solve = new TF1("Z1_tkr_Solve", [](double *x, double *p){ return ZOn
 TF1 *Z1_tof_Solve = new TF1("Z1_tof_Solve", [](double *x, double *p){ return ZOne_TOF(x[0]); }, 0.01, 0.95, 0);
 
 bool charge_cut_z1(double Proxy_Beta, double Reco_Beta){
-    if(Reco_Beta > 0.75 && Proxy_Beta > 0.66){ return 1; }else if(Reco_Beta < 0.75 && Proxy_Beta >  0.83*Reco_Beta + 0.0328){return 1;}else{return 0;}
+    return true;
 }
+
+/*
+bool charge_cut_z1(double Proxy_Beta, double Reco_Beta){
+    if(Reco_Beta > 0.75 && Proxy_Beta > 0.66){ return 1; }else if(Reco_Beta < 0.75 && Proxy_Beta >  0.83*Reco_Beta + 0.0328){return 1;}else{return 0;}
+}*/
 
 bool charge_cut_z2(double Proxy_Beta, double Reco_Beta){
     if(Reco_Beta > 0.75 && Proxy_Beta < 0.55){ return 1; }else if(Reco_Beta < 0.75 && Proxy_Beta <  0.78*Reco_Beta - 0.033){return 1;}else{return 0;}
