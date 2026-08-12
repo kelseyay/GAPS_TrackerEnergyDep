@@ -26,6 +26,7 @@ GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("MC truth energy depositions in beta bins");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
+parser->AddCommandLineOption<string>("end_name", "name at the end of pngs","","e");
 parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.2,"l");
 parser->AddCommandLineOption<double>("beta_high", "upper Beta Cut",1,"u");
 parser->AddCommandLineOption<int>("bbins", "number of beta bins",4,"b");
@@ -35,6 +36,7 @@ parser->AddCommandLineOption<bool>("MC_Weighting", "Monte Carlo Weighting on or 
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
+string end_name = parser->GetOption<string>("end_name");
 string reco_path = parser->GetOption<string>("in_path");
 string out_path = parser->GetOption<string>("out_file");
 double betacut = parser->GetOption<double>("beta_low");
@@ -307,17 +309,17 @@ label_2Dhisto(h2dbetaTKR_full, pts_full, errs_full);
 label_2Dhisto(h2dbetaTOF_full, pts_TOF_full, errs_TOF_full);
 
 
-histplot2f_pts_errs("c_tkr_full", h2dbetaTKR_full,pts_full,errs, "Rec: Full TKR Energy x Cos(theta) Distribution vs Beta", "Beta" , "Energy x Cos(theta)", "NEntries", out_path + "TKR2D_vs_Beta_Rec" );
-histplot2f_pts_errs("c_tof_full", h2dbetaTOF_full,pts_TOF_full,errs_TOF_full,"Rec: Full TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "TOF2D_vs_Beta_Rec" );
+histplot2f_pts_errs("c_tkr_full", h2dbetaTKR_full,pts_full,errs, "Rec: Full TKR Energy x Cos(theta) Distribution vs Beta", "Beta" , "Energy x Cos(theta)", "NEntries", out_path + "TKR2D_vs_Beta_Rec" + end_name);
+histplot2f_pts_errs("c_tof_full", h2dbetaTOF_full,pts_TOF_full,errs_TOF_full,"Rec: Full TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "TOF2D_vs_Beta_Rec" + end_name );
 
-histplot2f_pts_errs("c0", h2dbetaTOF[0],pts_TOF,errs_TOF,"UMB Rec: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "UMB_TOF2D_vs_Beta_Rec" );
-histplot2f_pts_errs("c4", h2dbetaTOF[1],pts_TOF,errs_TOF,"CBE_top Rec: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "CBE_top_TOF2D_vs_Beta_Rec" );
-histplot2f_pts_errs("c5", h2dbetaTOF[2],pts_TOF,errs_TOF,"CBE_bot Rec: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "CBE_bot_TOF2D_vs_Beta_Rec" );
-histplot2f_pts_errs("c2", h2dcosTOF,cos_pts_TOF,cos_errs_TOF,"Rec: MIP TOF Energy x Sin/Cos(theta) Distribution vs Cos(Theta)", "Cos(Theta)" , "Angle Corrected Energy", "NEntries", out_path + "TOF2D_vs_Cos_Rec" );
-histplot2f_pts_errs("c3", h2dcosTKR,cos_pts_TKR,cos_errs_TKR,"Rec: MIP TKR Energy x Sin/Cos(theta) Distribution vs Cos(Theta)", "Cos(Theta)" , "Energy x Cos(Theta)", "NEntries", out_path + "TKR2D_vs_Cos_Rec" );
+histplot2f_pts_errs("c0", h2dbetaTOF[0],pts_TOF,errs_TOF,"UMB Rec: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "UMB_TOF2D_vs_Beta_Rec" + end_name );
+histplot2f_pts_errs("c4", h2dbetaTOF[1],pts_TOF,errs_TOF,"CBE_top Rec: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "CBE_top_TOF2D_vs_Beta_Rec" + end_name );
+histplot2f_pts_errs("c5", h2dbetaTOF[2],pts_TOF,errs_TOF,"CBE_bot Rec: TOF Energy x Sin/Cos(theta) Distribution vs Beta", "Beta" , "Angle Corrected Energy", "NEntries", out_path + "CBE_bot_TOF2D_vs_Beta_Rec" + end_name );
+histplot2f_pts_errs("c2", h2dcosTOF,cos_pts_TOF,cos_errs_TOF,"Rec: MIP TOF Energy x Sin/Cos(theta) Distribution vs Cos(Theta)", "Cos(Theta)" , "Angle Corrected Energy", "NEntries", out_path + "TOF2D_vs_Cos_Rec" + end_name );
+histplot2f_pts_errs("c3", h2dcosTKR,cos_pts_TKR,cos_errs_TKR,"Rec: MIP TKR Energy x Sin/Cos(theta) Distribution vs Cos(Theta)", "Cos(Theta)" , "Energy x Cos(Theta)", "NEntries", out_path + "TKR2D_vs_Cos_Rec" + end_name );
 
 for(int i = 0; i < Ntkr; i++){
-    histplot2f_pts_errs(("ctkr_layer_" + to_string(i)).c_str(), h2dbetaTKR[i],pts,errs, "Layer " + to_string(i) + " Rec: TKR Energy x Cos(theta) Distribution vs Beta", "Beta" , "Energy x Cos(theta)", "NEntries", out_path + "TKR2D_vs_Beta_Rec"+to_string(i) );
+    histplot2f_pts_errs(("ctkr_layer_" + to_string(i)).c_str(), h2dbetaTKR[i],pts,errs, "Layer " + to_string(i) + " Rec: TKR Energy x Cos(theta) Distribution vs Beta", "Beta" , "Energy x Cos(theta)", "NEntries", out_path + "TKR2D_vs_Beta_Rec"+to_string(i) + end_name);
 }
 
 myfile << "EdepTKR = [" ;
@@ -326,7 +328,7 @@ for(int i = 0; i < bbins; i++){
     //cout << "Mean of tkr hist " << i << " = " << htkr[i]->GetMean() << endl;
     myfile << htkr[i]->GetMean();
     if(i != bbins - 1) myfile << ",";
-    histplot1f(("ctkr" + to_string(i)).c_str(), htkr[i], ( "Edep Beta " + to_string(betacut+bwid*i) + " - " + to_string(betacut+bwid*(i+1)) ).c_str(),"Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltkr" + to_string(i)).c_str() );
+    histplot1f(("ctkr" + to_string(i)).c_str(), htkr[i], ( "Edep Beta " + to_string(betacut+bwid*i) + " - " + to_string(betacut+bwid*(i+1)) ).c_str(),"Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltkr" + to_string(i)).c_str() + end_name );
 }
 
 myfile << "]" << endl;
@@ -337,7 +339,7 @@ for(int i = 0; i < bbins; i++){
     //cout << "Mean of tkr hist " << i << " = " << htkr[i]->GetMean() << endl;
     myfile << htof[i]->GetMean();
     if(i != bbins - 1) myfile << ",";
-    histplot1f(("ctof" + to_string(i)).c_str(), htof[i], ( "Edep Beta " + to_string(betacut+bwid*i) + " - " + to_string(betacut+bwid*(i+1)) ).c_str(),"Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltof" + to_string(i)).c_str() );
+    histplot1f(("ctof" + to_string(i)).c_str(), htof[i], ( "Edep Beta " + to_string(betacut+bwid*i) + " - " + to_string(betacut+bwid*(i+1)) ).c_str(),"Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltof" + to_string(i)).c_str() + end_name );
 }
 myfile << "]" << endl;
 
@@ -345,8 +347,8 @@ myfile << "h2dbetaTKR_full Nentries = " << h2dbetaTKR_full->GetEntries() << endl
 myfile << "h2dbetaTOF_full Nentries = " << h2dbetaTOF_full->GetEntries() << endl;
 
 for(int i = 0; i < cbins; i++){
-    histplot1f(("ctof_cos" + to_string(i)).c_str(), htof_cos[i], ( "MIP Edep Cos " + to_string(coslow+cwid*i) + " - " + to_string(coslow+cwid*(i+1)) ).c_str(),"Cos(theta) Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltof_Cos" + to_string(i)).c_str() );
-    histplot1f(("ctkr_cos" + to_string(i)).c_str(), htkr_cos[i], ( "MIP Edep Cos " + to_string(coslow+cwid*i) + " - " + to_string(coslow+cwid*(i+1)) ).c_str(),"Cos(theta) Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltkr_Cos" + to_string(i)).c_str() );
+    histplot1f(("ctof_cos" + to_string(i)).c_str(), htof_cos[i], ( "MIP Edep Cos " + to_string(coslow+cwid*i) + " - " + to_string(coslow+cwid*(i+1)) ).c_str(),"Cos(theta) Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltof_Cos" + to_string(i)).c_str() + end_name );
+    histplot1f(("ctkr_cos" + to_string(i)).c_str(), htkr_cos[i], ( "MIP Edep Cos " + to_string(coslow+cwid*i) + " - " + to_string(coslow+cwid*(i+1)) ).c_str(),"Cos(theta) Energy Deposition Angle Corrected (Sin or Cos)","NEvents", out_path + ("Fulltkr_Cos" + to_string(i)).c_str() + end_name );
 }
 
 //Histogram for NEntries at a strip level

@@ -175,7 +175,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 		}
 
 		//This tell me was looking for really nice reconstructed events with many secondaries.
-		if(vertexIsOk_Reco && Event->GetNTracks() > 5 && Event->GetNTracks() < 13 && PtrackTKR > 0 && OffHitCtr < 6 /*&& needthree == Event->GetNTracks()*/ && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
+		if(vertexIsOk_Reco && Event->GetNTracks() > 3 && Event->GetNTracks() < 6 && PtrackTKR > 0 && OffHitCtr < 3 /*&& needthree == Event->GetNTracks()*/ && (pt->GetChi2()/pt->GetNdof()) < 3.2 ){
 			cout << "Event " << i << " vertex in the tracker! Reasonable Secondary Number! Not so many Off track hits!" << endl;
 			if(SAVE){
 			    Copy_GRecoTree->Fill();

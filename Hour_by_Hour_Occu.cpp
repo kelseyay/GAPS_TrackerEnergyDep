@@ -150,6 +150,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
         TreeRec->GetEntry(i);
         T2 = Event->GetEventTime();
         int Hour = floor( (T2-T) / 3600);
+        if(Hour < 0) Hour = 0;
 
         if( ((int)i % (int)ceil(TreeRec->GetEntries()/10) == 0) ){
 		    cout << "Event number " << i << endl;
@@ -167,18 +168,18 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
             cout << time << endl;
 
             format_histplot2f(hnentries,"Tracker " + time,"row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries");
-            format_hist2d(HTofUMBOccu,"UMB " + time,"X Location [cm]","Y Location [cm]","NEntries",1000);
-            format_hist2d(HTofCBEtopOccu,"CBEtop " + time,"X Location [cm]","Y Location [cm]","NEntries",100);
-            format_hist2d(HTofCBEbotOccu,"CBEbot " + time,"X Location [cm]","Y Location [cm]","NEntries",100);
-            format_hist2d(HTofCOR_XOccu,"COR +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
-            format_hist2d(HTofCOR_min_XOccu,"COR -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
-            format_hist2d(HTofCOR_YOccu,"COR +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
-            format_hist2d(HTofCOR_min_YOccu,"COR -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
+            format_hist2d(HTofUMBOccu,"UMB " + time,"X Location [mm]","Y Location [mm]","NEntries",1000);
+            format_hist2d(HTofCBEtopOccu,"CBEtop " + time,"X Location [mm]","Y Location [mm]","NEntries",100);
+            format_hist2d(HTofCBEbotOccu,"CBEbot " + time,"X Location [mm]","Y Location [mm]","NEntries",100);
+            format_hist2d(HTofCOR_XOccu,"COR +X " + time,"Y Location [mm]","Z Location [mm]","NEntries",100);
+            format_hist2d(HTofCOR_min_XOccu,"COR -X " + time,"Y Location [mm]","Z Location [mm]","NEntries",100);
+            format_hist2d(HTofCOR_YOccu,"COR +Y " + time,"X Location [mm]","Z Location [mm]","NEntries",100);
+            format_hist2d(HTofCOR_min_YOccu,"COR -Y " + time,"X Location [mm]","Z Location [mm]","NEntries",100);
 
-            format_hist2d(HTofCBE_XOccu,"CBE +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
-            format_hist2d(HTofCBE_min_XOccu,"CBE -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
-            format_hist2d(HTofCBE_YOccu,"CBE +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
-            format_hist2d(HTofCBE_min_YOccu,"CBE -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
+            format_hist2d(HTofCBE_XOccu,"CBE +X " + time,"Y Location [mm]","Z Location [mm]","NEntries",100);
+            format_hist2d(HTofCBE_min_XOccu,"CBE -X " + time,"Y Location [mm]","Z Location [mm]","NEntries",100);
+            format_hist2d(HTofCBE_YOccu,"CBE +Y " + time,"X Location [mm]","Z Location [mm]","NEntries",100);
+            format_hist2d(HTofCBE_min_YOccu,"CBE -Y " + time,"X Location [mm]","Z Location [mm]","NEntries",100);
 
             //format_hist2f(hnentries,"Full Tracker Strip Level NHits","row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries");
 
@@ -255,7 +256,7 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
             int VolumeId = Event->GetVolumeId().at(isig);
             //cout << "Volume Id " << VolumeId << endl;
 
-            if(GGeometryObject::IsTofVolume(VolumeId) && Event->GetHitSeries().at(isig).GetTotalEnergyDeposition() > TofCutLow){
+            if(GGeometryObject::IsTofVolume(VolumeId) && Event->GetHitSeries().at(isig).GetTotalEnergyDeposition() > TofCutLow){ //Hit series is L1!
                 if(volspec(VolumeId,0,3) == 100){ //If hit is Umb, fill the Umb Occu plot
                     HTofUMBOccu->Fill(Event->GetHitSeries().at(isig).GetPosition().X(), Event->GetHitSeries().at(isig).GetPosition().Y());
                     //HTofUmbOccu->Fill(Event->GetTrack(0)->GetPosition(k).X()+Event->GetTrack(0)->GetPositionResidual(k).X(), Event->GetTrack(0)->GetPosition(k).Y()+Event->GetTrack(0)->GetPositionResidual(k).Y());
@@ -364,18 +365,18 @@ string time = time_previous + " to " + time_thisstep.substr(time_thisstep.length
 
 cout << time << endl;
 format_histplot2f(hnentries,"Tracker " + time,"row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries");
-format_hist2d(HTofUMBOccu,"UMB " + time,"X Location [cm]","Y Location [cm]","NEntries",1000);
-format_hist2d(HTofCBEtopOccu,"CBEtop " + time,"X Location [cm]","Y Location [cm]","NEntries",100);
-format_hist2d(HTofCBEbotOccu,"CBEbot " + time,"X Location [cm]","Y Location [cm]","NEntries",100);
-format_hist2d(HTofCOR_XOccu,"COR +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
-format_hist2d(HTofCOR_min_XOccu,"COR -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
-format_hist2d(HTofCOR_YOccu,"COR +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
-format_hist2d(HTofCOR_min_YOccu,"COR -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
+format_hist2d(HTofUMBOccu,"UMB " + time,"X Location [mm]","Y Location [mm]","NEntries",1000);
+format_hist2d(HTofCBEtopOccu,"CBEtop " + time,"X Location [mm]","Y Location [mm]","NEntries",100);
+format_hist2d(HTofCBEbotOccu,"CBEbot " + time,"X Location [mm]","Y Location [mm]","NEntries",100);
+format_hist2d(HTofCOR_XOccu,"COR +X " + time,"Y Location [mm]","Z Location [mm]","NEntries",100);
+format_hist2d(HTofCOR_min_XOccu,"COR -X " + time,"Y Location [mm]","Z Location [mm]","NEntries",100);
+format_hist2d(HTofCOR_YOccu,"COR +Y " + time,"X Location [mm]","Z Location [mm]","NEntries",100);
+format_hist2d(HTofCOR_min_YOccu,"COR -Y " + time,"X Location [mm]","Z Location [mm]","NEntries",100);
 
-format_hist2d(HTofCBE_XOccu,"CBE +X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
-format_hist2d(HTofCBE_min_XOccu,"CBE -X " + time,"Y Location [cm]","Z Location [cm]","NEntries",100);
-format_hist2d(HTofCBE_YOccu,"CBE +Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
-format_hist2d(HTofCBE_min_YOccu,"CBE -Y " + time,"X Location [cm]","Z Location [cm]","NEntries",100);
+format_hist2d(HTofCBE_XOccu,"CBE +X " + time,"Y Location [mm]","Z Location [mm]","NEntries",100);
+format_hist2d(HTofCBE_min_XOccu,"CBE -X " + time,"Y Location [mm]","Z Location [mm]","NEntries",100);
+format_hist2d(HTofCBE_YOccu,"CBE +Y " + time,"X Location [mm]","Z Location [mm]","NEntries",100);
+format_hist2d(HTofCBE_min_YOccu,"CBE -Y " + time,"X Location [mm]","Z Location [mm]","NEntries",100);
 //format_hist2f(hnentries,"Full Tracker Strip Level NHits","row(0-5)*32 + strip(0-31)","layer(0-5)*6 + mod(0-5)","NEntries");
 
 //new TCanvas(Form("c%d", i), Form("Canvas %d", i), 200 + i*50, 200 + i*50, 600, 400);
@@ -417,7 +418,10 @@ format_pad(c_sides[nhours],8);
 HTofCBE_min_YOccu->Draw("COLZ");
 
 //Last histogram in the pdf
-c_flat[nhours]->Print(Form("%s",oo.Data())); c_sides[nhours]->Print(Form("%s",oo.Data())); c_flat[nhours]->Print(Form("%s]",oo.Data()));
+
+//cout << "nhours = " << nhours << endl;
+if(nhours == 0){c_flat[hour_flag]->Print(Form("%s[",oo.Data())); c_flat[hour_flag]->Print(Form("%s",oo.Data())); c_sides[hour_flag]->Print(Form("%s",oo.Data())); c_sides[hour_flag]->Print(Form("%s]",oo.Data()));}
+if(nhours > 0) {c_flat[nhours]->Print(Form("%s",oo.Data())); c_sides[nhours]->Print(Form("%s",oo.Data())); c_flat[nhours]->Print(Form("%s]",oo.Data()));}
 
 myfile.close();
 

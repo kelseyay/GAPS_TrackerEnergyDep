@@ -23,8 +23,9 @@ parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data f
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<int>("event", "specific event", 0, "e");
 parser->AddCommandLineOption<bool>("MC_truth", "specific event", 0, "m");
-parser->AddCommandLineOption<bool>("dEdx", "specific event", 0, "x");
-parser->AddCommandLineOption<bool>("Edep", "specific event", 0, "p");
+parser->AddCommandLineOption<bool>("dEdx", "dEdx information", 0, "x");
+parser->AddCommandLineOption<bool>("Edep", "Just energy depositions", 0, "p");
+parser->AddCommandLineOption<bool>("low_gain", "Low gain hit info", 0, "l");
 parser->AddCommandLineOption<bool>("reco_info", "reconstruction info", 0, "r");
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
 parser->ParseCommandLine(argc, argv);
@@ -34,6 +35,7 @@ string reco_path = parser->GetOption<string>("in_path");
 bool RECO = parser->GetOption<bool>("reco_info");
 bool EDEP = parser->GetOption<bool>("Edep");
 bool MC = parser->GetOption<bool>("MC_truth");
+bool LG = parser->GetOption<bool>("low_gain");
 bool DEDX = parser->GetOption<bool>("dEdx");
 int sp_event = parser->GetOption<int>("event");
 
@@ -124,14 +126,24 @@ char text[400]; //This variable is used later to name the plots
 //Now we can go over the loop
 TreeRec->GetEntry(0);
 
+int ev_prev = 0;
+
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 
 //Using i to loop over every event in the tree
+for(unsigned int i = 0; i < 100; i+=MainLoopScaleFactor){
 //for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
-for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
+//for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
     TreeRec->GetEntry(i);
     TreeGReco->GetEntry(i);
     TreeMC->GetEntry(i);
+
+    if(Event->GetEventNumber() <= ev_prev){
+        cout << "Event is " << i << "Event id is " << Event->GetEventNumber() << endl;
+        cout << "Previous event id is " << ev_prev << endl;
+    }
+
+    ev_prev = Event->GetEventNumber();
 
     //cout << endl << "Event is " << i << endl;
     //cout << "Number of tracks " << Event->GetNTracks() << endl;
@@ -140,9 +152,11 @@ for(unsigned int i = sp_event; i < sp_event+1; i+=MainLoopScaleFactor){
 
 
     //Tell me about the LG hits!
-    for(unsigned int k = 0; k < Event->GetTriggerVolumeId().size(); k++){
-        unsigned int VolumeId = Event->GetTriggerVolumeId().at(k);
-        cout << "LG Hit " << k << " at Volid " << VolumeId << endl;
+    if(LG){
+        for(unsigned int k = 0; k < Event->GetTriggerVolumeId().size(); k++){
+            unsigned int VolumeId = Event->GetTriggerVolumeId().at(k);
+            cout << "LG Hit " << k << " at Volid " << VolumeId << endl;
+        }
     }
 
     //Tell me about the energy depositions of all the tracks

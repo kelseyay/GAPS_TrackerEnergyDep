@@ -78,6 +78,7 @@ GOptionParser* parser = GOptionParser::GetInstance();
 parser->AddProgramDescription("Minimal Reproducable Example for Extracing Data from Reco Data");
 parser->AddCommandLineOption<string>("in_path", "path to instrument data files", "./*", "i");
 parser->AddCommandLineOption<string>("out_file", "name of output root file", "", "o");
+parser->AddCommandLineOption<string>("end_name", "name at the end of pngs","","e");
 parser->AddCommandLineOption<double>("beta_low", "low Beta Cut",0.8,"l");
 parser->AddCommandLineOption<double>("beta_high", "upper Beta Cut",1,"u");
 parser->AddCommandLineOption<double>("tkr_factor", "tkr factor",1,"k");
@@ -91,6 +92,8 @@ parser->AddCommandLineOption<bool>("MC_Weighting", "Monte Carlo Weighting on or 
 parser->ParseCommandLine(argc, argv);
 parser->Parse();
 
+
+string end_name = parser->GetOption<string>("end_name");
 bool MC_Weight = parser->GetOption<bool>("MC_Weighting");
 double betacut = parser->GetOption<double>("beta_low");
 if(betacut <= 0 || betacut >=1){ betacut = 0.8; cout << "Error with low beta choice. Setting Beta low to 0.8" << endl; }
@@ -161,8 +164,6 @@ TH1F * HBetaProxy = new TH1F("HBetaProxy","HBetaProxy",40, betacut, betahigh);
 TH1F * HBetaRec = new TH1F("HBetaRec","HBetaRec",40, betacut, betahigh);
 TH2D * HRecB_vs_ProxB = new TH2D("HRecB_vs_ProxB","Rec_Beta vs Prox_B",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 1);
 
-int bcounts = 0;
-
 //TH2D * HRecB_vs_GenB_Weight = new TH2D("HRecB_vs_GenB_Weight","Rec_Beta * Tr_Mean vs Rec_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 1);
 //TH2D * HProxB_vs_GenB_Weight = new TH2D("HProxB_vs_GenB_Weight","Prox_B vs Gen_Beta",50, betacut - 0.1, betahigh + 0.1, 50, 0.1, 1);
 
@@ -187,9 +188,8 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 	//Cuts are implemented in this chunk:
 	if(Event->GetNTracks() == 1){  //First select the single track event
-		bool Umbflag = 0;
-		bool CBEtopflag = 0;
-		bool CBEbotflag = 0;
+	    bool Outer_TOF_flag[7] = {}; //TOF top = 0, bot = 1, +X = 2, -X = 3, +Y = 4, -Y = 5. 1 or 3 PPs is 6
+		bool Inner_TOF_flag[7] = {}; //TOF top = 0, bot = 1, +X = 2, -X = 3, +Y = 4, -Y = 5. 1 or 3 PPs is 6
 		bool TKRflag = 0;
 		int Layer_Hits_Tracker[7] = {}; //Seven layers
 
@@ -209,13 +209,12 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                     Layer_Hits_Tracker[layer]++;
                     TKRflag = 1;
                 }
-                if(volspec(VolumeId,0,3) == 100 && Event->GetTrack(0)->GetEnergyDeposition(isig) > TofCutLow){ Umbflag = 1; } // cout << "UMB hit!" <<endl ;
-                if(volspec(VolumeId,0,3) == 110 && Event->GetTrack(0)->GetEnergyDeposition(isig) > TofCutLow) { CBEtopflag = 1; }// cout << "CBE top hit!" << endl;
-                if(volspec(VolumeId,0,3) == 111 && Event->GetTrack(0)->GetEnergyDeposition(isig) > TofCutLow) { CBEbotflag = 1; }// cout << "CBE bot hit!" << endl;
+                if(volspec(VolumeId,0,2) == 10 && Event->GetTrack(0)->GetEnergyDeposition(isig) > TofCutLow){ Outer_TOF_flag[volspec(VolumeId,2,1)] = 1; }
+                if(volspec(VolumeId,0,2) == 11 && Event->GetTrack(0)->GetEnergyDeposition(isig) > TofCutLow){ Inner_TOF_flag[volspec(VolumeId,2,1)] = 1; }
 			}
 
-			//Do we want to only run this on certain tracks? Yeah probably. Can remove the TOF flags. Just run on whatever lol.
-			if(Umbflag && CBEtopflag && (CBEbotflag || TKRflag)){ //Guarantees 3 hit requirement, if the energy deposition is lower than the solver minimum, don't use. Still try to calculate.
+			if( (Outer_TOF_flag[0] && Inner_TOF_flag[0])  && (Inner_TOF_flag[1] || TKRflag) ) { //If UMB and CBE top
+			//if( ((Outer_TOF_flag[0] && Inner_TOF_flag[0]) || (Outer_TOF_flag[2] && Inner_TOF_flag[2]) || (Outer_TOF_flag[3] || Inner_TOF_flag[3]) || (Outer_TOF_flag[4] && Inner_TOF_flag[4]) || (Outer_TOF_flag[5] && Inner_TOF_flag[5]) ) && (Inner_TOF_flag[1] || TKRflag) ) {
 			    if(print) cout << endl << "Event is " << i << endl;
 				if(print) cout << "Breco is " << Event->GetPrimaryBeta() << endl;
 			    vector<double> Beta_Proxy;
@@ -231,17 +230,33 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 							if(Ang_Edep > solvermin_tof){
 							    double root = Z1_tof_Solve->GetX(Ang_Edep);
 								if(print)cout << "Hit is " << isig << endl;
-								if(print)cout << "Energy Deposition is " << Edep << " angle corrected is " << Ang_Edep << endl;
-                                if(print)cout << "Calculated Beta at Volid " << VolumeId << " = "  << root << endl;
+								if(print)cout << "Energy Deposition at Volid " << VolumeId << " is " << Edep << " angle corrected is " << Ang_Edep << endl;
+                                if(print)cout << "Calculated Beta at Volid = "  << root << endl;
                                 Beta_Proxy.push_back(root);
 							}
                         }else{ //It's a vertical paddle
-                            Ang_Edep = tf*Edep*fabs( sqrt(1-pow(Event->GetPrimaryMomentumDirection().CosTheta(),2)));
+                            //The calculation of the correction factor depends on the orientation of the paddle
+                            float xy_path_corr = 1;
+                            float x_vec = Event->GetTrack(0)->GetMomentumDirection()[0][0];
+                            float y_vec = Event->GetTrack(0)->GetMomentumDirection()[0][1];
+
+                            if(volspec(VolumeId,2,1) == 2 ||volspec(VolumeId,2,1) == 3){ //+/- X paddles
+                                if(print)cout << "xvec, yvec = " << x_vec << " " << y_vec << endl;
+                                if(print)cout << "cos(phi) = " << fabs(x_vec) / sqrt( pow(x_vec,2) + pow(y_vec,2) ) << endl;
+                                xy_path_corr = fabs(x_vec) / sqrt( pow(x_vec,2) + pow(y_vec,2) );
+                            }
+                            if(volspec(VolumeId,2,1) == 4 ||volspec(VolumeId,2,1) == 5){ //+/- Y paddles
+                                if(print)cout << "xvec, yvec = " << x_vec << " " << y_vec << endl;
+                                if(print)cout << "cos(phi) = " << fabs(y_vec) / sqrt( pow(x_vec,2) + pow(y_vec,2) ) << endl;
+                                xy_path_corr = fabs(y_vec) / sqrt( pow(x_vec,2) + pow(y_vec,2) );
+                            }
+
+                            Ang_Edep = tf*Edep*fabs( sqrt(1-pow(Event->GetPrimaryMomentumDirection().CosTheta(),2)))*xy_path_corr;
                             if(Ang_Edep > solvermin_tof){
 							    double root = Z1_tof_Solve->GetX(Ang_Edep);
 								if(print)cout << "Hit is " << isig << endl;
-								if(print)cout << "Energy Deposition is " << Edep << " angle corrected is " << Ang_Edep << endl;
-                                if(print)cout << "Calculated Beta at Volid " << VolumeId << " = "  << root << endl;
+								if(print)cout << "Energy Deposition at Volid " << VolumeId << " is " << Edep << " angle corrected is " << Ang_Edep << endl;
+                                if(print)cout << "Calculated Beta = "  << root << endl;
                                 Beta_Proxy.push_back(root);
 							}
                         }
@@ -282,10 +297,9 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                         //To floor or not to floor!!!
                         //cout << "Beta Prox floor(BP/2) = " << TrBP << endl;
                         if(print)cout << "Beta Prox BP/2 not floor = " << TrBP << endl;
-                        if(TrBP > 0 /*&& charge_cut_z1(TrBP,Event->GetPrimaryBeta())*/){
+                        if(TrBP > 0 && charge_cut_z1(TrBP,Event->GetPrimaryBeta()) ){
                             HBetaProxy->Fill(TrBP);
                             HBetaRec->Fill(Event->GetPrimaryBeta());
-                            bcounts++;
                             HRecB_vs_ProxB->Fill(Event->GetPrimaryBeta(),TrBP);
                         }
 
@@ -303,13 +317,18 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 
 }  //Closed bracket for iteration through tree events, move on to the next event i
 
-HBetaRec->SetMaximum(bcounts);
+HBetaRec->SetMaximum(HBetaRec->GetEntries());
+HBetaProxy->SetMaximum(HBetaProxy->GetEntries());
 
-HBetaProxy->Scale( 1./HBetaProxy->Integral(),"WIDTH");
-//HBetaProxy->SetMaximum(bcounts);
-histplot1f("c1",HBetaProxy,"Proxy Beta","Proxy Beta","NEntries", out_path + "Rec_BetaProxy"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR) + "TF_Factor" + roundstr_d(tf,2) + "TK_Factor" + roundstr_d(tk,2)  );
-histplot1f("c2",HBetaRec,"Reconstructed Beta","Reconstructed Beta","NEntries", out_path + "Rec_BetaRec " + "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2) + "TOF" + to_string(TF) + "TKR" + to_string(TKR) + "TF_Factor" + roundstr_d(tf,2) + "TK_Factor" + roundstr_d(tk,2)  );
-histplot2d("c2_5",HRecB_vs_ProxB,"Prox_B versus Rec_B","Reconstructed Beta", "Proxy Beta","NEntries", out_path + "RecBProxB" + "B" +  roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR) + "TF_Factor" + roundstr_d(tf,2) + "TK_Factor" + roundstr_d(tk,2) );
+//HBetaProxy->Scale( 1./HBetaProxy->Integral(),"WIDTH");
+
+histplot1f("c1",HBetaProxy,"Proxy Beta","Proxy Beta","NEntries", out_path + "Rec_BetaProxy"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR) + "TF_Factor" + roundstr_d(tf,2) + "TK_Factor" + roundstr_d(tk,2) + end_name );
+histplot1f("c2",HBetaRec,"Reconstructed Beta","Reconstructed Beta","NEntries", out_path + "Rec_BetaRec " + "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2) + "TOF" + to_string(TF) + "TKR" + to_string(TKR) + "TF_Factor" + roundstr_d(tf,2) + "TK_Factor" + roundstr_d(tk,2) + end_name );
+histplot2d("c2_5",HRecB_vs_ProxB,"Prox_B versus Rec_B","Reconstructed Beta", "Proxy Beta","NEntries", out_path + "RecBProxB" + "B" +  roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR) + "TF_Factor" + roundstr_d(tf,2) + "TK_Factor" + roundstr_d(tk,2) + end_name );
+
+
+HBetaRec->SaveAs((out_path + "HRecData.root").c_str());
+HBetaProxy->SaveAs((out_path + "HProxyData.root").c_str());
 
 
 myfile.open(out_path + txtname,std::ios::app);

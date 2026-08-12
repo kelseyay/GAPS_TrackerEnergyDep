@@ -1,6 +1,7 @@
 //HEY YOU NEED TO FIX THE TRUNCATED MEAN!!!
 //SHOULD BE TAKING THE LOWER HALF OF FLOOR(N) HITS!!!
 //Doing this lower-biases the results, so maybe we skip this for now until it's clear how to deal with adjacent strip hits.
+//Or maybe it's fine for just what this is now.
 
 //How to use: ./DZedep3 -i /data1/nextcloud/cra_data/data/2025/production/v26.01/reconstructed/flight/251226/starlink251226_17 -s 0 -t 1 -f 1 -k 1 -r 2 -o test/
 //Also use: ./DZedep3 -i /home/kelsey/simulations/simdat/flight/251226/26.01/starlink251226_1 -s 0 -t 1 -f 1 -k 1 -r 2 -l 0.9 -u 0.99 -o test/

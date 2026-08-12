@@ -1,7 +1,5 @@
-//HEY I'M DOING PERVERSE THINGS LIKE MANUALLY BLINDING OUT A CBE BOT PADDLE!
-
 //How to use: ./MCCutEff -i /home/kelsey/simulations/simdat/mu/v.2.1.2/mu-_gaps_triggerlevel1_FTFP_BERT_1744342800_rec -o test -w 1
-//Super not thrilled with how slow this is...
+
 using namespace std;
 
 #include "KYtools.C" //Everything is already included here lol
@@ -255,9 +253,10 @@ for(unsigned int i = 0; i < TreeRec->GetEntries()/MainLoopScaleFactor; i++){ //T
 
                     if(volspec(MCVolid[k],0,3) == 100)TrueUMBflag++;
                     if(volspec(MCVolid[k],0,3) == 110){ TrueCBEtopflag++; /*cout << "VolumeId " << MCVolid[k] << " CBEtop hit! " << volspec(MCVolid[k],3,4) << endl; HCBEtop->Fill(volspec(MCVolid[k],3,4));*/ }
-                    //PERVERSE THING!!!!
-                    if(volspec(MCVolid[k],0,3) == 111 && volspec(MCVolid[k],0,7) != 1110005){ TrueCBEbotflag++; }
-                    //if(volspec(MCVolid[k],0,3) == 111){ TrueCBEbotflag++; }
+                    //Curious about what removing one paddle HG will do
+                    //if(volspec(MCVolid[k],0,3) == 111 && volspec(MCVolid[k],0,7) != 1110005){ TrueCBEbotflag++; }
+                    //End curious thing.
+                    if(volspec(MCVolid[k],0,3) == 111){ TrueCBEbotflag++; }
                     if(volspec(MCVolid[k],0,3) == 112 || volspec(MCVolid[k],0,3) == 113 || volspec(MCVolid[k],0,3) == 114 || volspec(MCVolid[k],0,3) == 115 || volspec(MCVolid[k],0,3) == 116)TrueCBEsideflag++;
                     if(volspec(MCVolid[k],0,3) == 102 || volspec(MCVolid[k],0,3) == 103 || volspec(MCVolid[k],0,3) == 104 || volspec(MCVolid[k],0,3) == 105 || volspec(MCVolid[k],0,3) == 106)TrueCORflag++;
                 }

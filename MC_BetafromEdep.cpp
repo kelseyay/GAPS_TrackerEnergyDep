@@ -1,6 +1,8 @@
 //Hopefully this script will provide a primary beta from energy depositions in Not That Much Time.
 //This will start simple with beta from at least three tracker hits with energy deposition > 0.4
 
+//IMPORTANT NOTE: Vertical paddle path length correction is NOT YET implemented in this particular script
+
 // How to use:
 // /home/kelsey/GAPS_TrackerEnergyDep/build/MCEdepBeta -i /home/kelsey/simulations/simdat/proton/v3.0.0/triggerlevel1/ -l 0.4 -u 0.8
 
@@ -28,7 +30,7 @@ float Ltof = 0.635;
 float rtof = 1.032;
 float iontof = (0.000016 * pow(Ztof,0.9));
 
-float z = 2;
+float z = 1;
 float Ztkr = 14;
 float Atkr = 28;
 float rtkr = 2.33; //Density g/cm^2
@@ -149,10 +151,9 @@ map<int, unsigned int> TofIndexVolumeIdMap;
 ca::GPlottingTools Plotting;
 char text[400]; //This variable is used later to name the plots
 
-TH1D * HBetaProxy = Plotting.DefineTH1D("HBetaProxy",20, betacut, betahigh, "Beta Proxy", "entries", 10, 100000);
-TH1D * HBetaRec = Plotting.DefineTH1D("HBetaRec",20, betacut, betahigh, "Beta Reconstructed", "entries", 10, 100000);
-TH1D * HBetaGen = Plotting.DefineTH1D("HBetaGen",20, betacut, betahigh, "Generated Beta", "entries", 10, 100000);
-int bcounts = 0;
+TH1D * HBetaProxy = Plotting.DefineTH1D("HBetaProxy",40, betacut, betahigh, "Beta Proxy", "entries", 10, 100000);
+TH1D * HBetaRec = Plotting.DefineTH1D("HBetaRec",40, betacut, betahigh, "Beta Reconstructed", "entries", 10, 100000);
+TH1D * HBetaGen = Plotting.DefineTH1D("HBetaGen",40, betacut, betahigh, "Generated Beta", "entries", 10, 100000);
 TH2D * HRecB_vs_GenB = new TH2D("HRecB_vs_GenB","Rec_Beta vs Gen_Beta",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 1);
 TH2D * HProxB_vs_GenB = new TH2D("HProxB_vs_GenB","Prox_B vs Gen_Beta",50, betacut - 0.1, betahigh + 0.1, 50, 0.1, 1);
 TH2D * HRecB_vs_ProxB = new TH2D("HRecB_vs_ProxB","Rec_Beta vs Prox_B",50,betacut - 0.1, betahigh + 0.1, 50, 0.1 , 1);
@@ -217,7 +218,7 @@ TreeRec->GetEntry(0);
 cout << "Total Number of events / Mainscale Factor = " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
 
 //Using i to loop over every event in the tree
-//for(unsigned int i = 0; i < 1000; i+=MainLoopScaleFactor){
+//for(unsigned int i = 0; i < 10; i+=MainLoopScaleFactor){
 for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
     TreeRec->GetEntry(i);
     TreeMC->GetEntry(i);
@@ -251,9 +252,11 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 			//cout << "Particle spec is " << MCEvent->GetTrack(0)->GetPdg() << endl;
             double RateScale = 0;
             if( MC_Weight ){
-                if(MCEvent->GetTrack(0)->GetPdg() == 13) RateScale = RateScale_muon(TreeSimulationParameter, MainLoopScaleFactor, StartingPlaneAcceptance, BinWidthFactor, HPrimaryBeta, CosZenithCut, GMuonTotalFluxUnscaled, FluxScaleFactor, Event);
-                if(MCEvent->GetTrack(0)->GetPdg() == 2212) FluxScaleFactor = 1;  RateScale = RateScale_TOA(TreeSimulationParameter, MainLoopScaleFactor, StartingPlaneAcceptance, BinWidthFactor, HPrimaryBeta, CosZenithCut, GProtonTotalFluxUnscaled, FluxScaleFactor, Event);
-                if(MCEvent->GetTrack(0)->GetPdg() == 1000020040) FluxScaleFactor = 1;  RateScale = RateScale_TOA(TreeSimulationParameter, MainLoopScaleFactor, StartingPlaneAcceptance, BinWidthFactor, HPrimaryBeta, CosZenithCut, GAlphaTotalFluxUnscaled, FluxScaleFactor, Event);
+                //cout << "Particle species track 0 " << MCEvent->GetTrack(0)->GetPdg() << endl;
+                if(MCEvent->GetTrack(0)->GetPdg() == 13) {RateScale = RateScale_muon(TreeSimulationParameter, MainLoopScaleFactor, StartingPlaneAcceptance, BinWidthFactor, HPrimaryBeta, CosZenithCut, GMuonTotalFluxUnscaled, FluxScaleFactor, Event); }
+                if(MCEvent->GetTrack(0)->GetPdg() == 2212) { FluxScaleFactor = 1;  RateScale = RateScale_TOA(TreeSimulationParameter, MainLoopScaleFactor, StartingPlaneAcceptance, BinWidthFactor, HPrimaryBeta, CosZenithCut, GProtonTotalFluxUnscaled, FluxScaleFactor, Event);}
+                if(MCEvent->GetTrack(0)->GetPdg() == 1000020040) {FluxScaleFactor = 1;  RateScale = RateScale_TOA(TreeSimulationParameter, MainLoopScaleFactor, StartingPlaneAcceptance, BinWidthFactor, HPrimaryBeta, CosZenithCut, GAlphaTotalFluxUnscaled, FluxScaleFactor, Event);}
+                //cout << "BGen = " << Bgen << " Cos(theta) = " << Event->GetPrimaryMomentumDirectionGenerated().CosTheta() << " RateScale = " << RateScale << endl;
             }
             HBetaGen_Weight_noTOFcuts->Fill(MCEvent->GetPrimaryBeta(),RateScale);
 
@@ -283,24 +286,39 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
 					float Ang_Edep = 0;
 
 					if(TF && GGeometryObject::IsTofVolume(VolumeId) && Event->GetTrack(0)->GetEnergyDeposition(isig) > TofCutLow){
-					    if(volspec(VolumeId,2,1) == 0 || volspec(VolumeId,2,1) == 1){ //It's a flat paddle.
-					        Ang_Edep = Edep*fabs(Event->GetPrimaryMomentumDirection().CosTheta());
+	                    if(volspec(VolumeId,2,1) == 0 || volspec(VolumeId,2,1) == 1){ //It's a flat paddle.
+							Ang_Edep = Edep*fabs(Event->GetPrimaryMomentumDirection().CosTheta());
 							if(Ang_Edep > solvermin_tof){
-							    double root = Z1_tof_Solve->GetX(Ang_Edep);
+			                    double root = Z1_tof_Solve->GetX(Ang_Edep);
 								if(print)cout << "Hit is " << isig << endl;
 								if(print)cout << "Energy Deposition at Volid " << VolumeId << " is " << Edep << " angle corrected is " << Ang_Edep << endl;
                                 if(print)cout << "Calculated Beta at Volid = "  << root << endl;
                                 Beta_Proxy.push_back(root);
 							}
-                        }else{ //It's a vertical paddle
-                            Ang_Edep = Edep*fabs( sqrt(1-pow(Event->GetPrimaryMomentumDirection().CosTheta(),2)));
+						}else{ //It's a vertical paddle
+                            //The calculation of the correction factor depends on the orientation of the paddle
+                            float xy_path_corr = 1;
+                            float x_vec = Event->GetTrack(0)->GetMomentumDirection()[0][0];
+                            float y_vec = Event->GetTrack(0)->GetMomentumDirection()[0][1];
+                            if(volspec(VolumeId,2,1) == 2 ||volspec(VolumeId,2,1) == 3){ //+/- X paddles
+                                if(print)cout << "xvec, yvec = " << x_vec << " " << y_vec << endl;
+                                if(print)cout << "cos(phi) = " << fabs(x_vec) / sqrt( pow(x_vec,2) + pow(y_vec,2) ) << endl;
+                                xy_path_corr = fabs(x_vec) / sqrt( pow(x_vec,2) + pow(y_vec,2) );
+                            }
+                            if(volspec(VolumeId,2,1) == 4 ||volspec(VolumeId,2,1) == 5){ //+/- Y paddles
+                                if(print)cout << "xvec, yvec = " << x_vec << " " << y_vec << endl;
+                                if(print)cout << "cos(phi) = " << fabs(y_vec) / sqrt( pow(x_vec,2) + pow(y_vec,2) ) << endl;
+                                xy_path_corr = fabs(y_vec) / sqrt( pow(x_vec,2) + pow(y_vec,2) );
+                            }
+
+                            Ang_Edep = Edep*fabs( sqrt(1-pow(Event->GetPrimaryMomentumDirection().CosTheta(),2)))*xy_path_corr;
                             if(Ang_Edep > solvermin_tof){
-							    double root = Z1_tof_Solve->GetX(Ang_Edep);
-								if(print)cout << "Hit is " << isig << endl;
-								if(print)cout << "Energy Deposition at Volid " << VolumeId << " is " << Edep << " angle corrected is " << Ang_Edep << endl;
+                                double root = Z1_tof_Solve->GetX(Ang_Edep);
+                                if(print)cout << "Hit is " << isig << endl;
+                                if(print)cout << "Energy Deposition at Volid " << VolumeId << " is " << Edep << " angle corrected is " << Ang_Edep << endl;
                                 if(print)cout << "Calculated Beta = "  << root << endl;
                                 Beta_Proxy.push_back(root);
-							}
+                            }
                         }
 					}
 
@@ -343,7 +361,6 @@ for(unsigned int i = 0; i < TreeRec->GetEntries(); i+=MainLoopScaleFactor){
                             HBetaProxy->Fill(TrBP);
                             HBetaGen->Fill(Event->GetPrimaryBetaGenerated());
                             HBetaRec->Fill(Event->GetPrimaryBeta());
-                            bcounts++;
                             HRecB_vs_GenB->Fill(Event->GetPrimaryBetaGenerated(),Event->GetPrimaryBeta());
                             HProxB_vs_GenB->Fill(Event->GetPrimaryBetaGenerated(),TrBP);
                             HRecB_vs_ProxB->Fill(Event->GetPrimaryBeta(),TrBP);
@@ -378,20 +395,23 @@ histplot2d("c2",HProxB_vs_GenB,"Prox_B versus Gen_B","Generated Beta", "Proxy Be
 histplot2d("c2_5",HRecB_vs_ProxB,"Prox_B versus Rec_B","Reconstructed Beta", "Proxy Beta","NEntries", out_path + "RecBProxB" + "B" +  roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
 
 
-HBetaRec->SetMaximum(bcounts);
-HBetaGen->SetMaximum(bcounts);
-HBetaProxy->SetMaximum(bcounts);
+HBetaRec->SetMaximum(HBetaRec->GetEntries());
+HBetaGen->SetMaximum(HBetaGen->GetEntries());
+HBetaProxy->SetMaximum(HBetaProxy->GetEntries());
 histplot1d("c3",HBetaProxy,"Proxy Beta","Proxy Beta","NEntries", out_path + "BetaProxy"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
 histplot1d("c4",HBetaGen,"Generated Beta","Generated Beta","NEntries", out_path + "BetaGen"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
 histplot1d("c5",HBetaRec,"Reconstructed Beta","Reconstructed Beta","NEntries", out_path + "BetaRec " + "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
 
-HBetaProxy_Weight->Scale( 1./HBetaProxy_Weight->Integral(),"WIDTH");
-HBetaProxy_Weight->SetMinimum(4e-2);
-HBetaProxy_Weight->SetMaximum(8);
-HBetaGen_Weight->SetMaximum(bcounts_Weight);
-HBetaRec_Weight->SetMaximum(bcounts_Weight);
+//HBetaProxy_Weight->Scale( 1./HBetaProxy_Weight->Integral(),"WIDTH");
+HBetaProxy_Weight->SetMinimum(1);
+HBetaProxy_Weight->SetMaximum(bcounts_Weight);
+
 HBetaGen_Weight->SetMinimum(1);
+HBetaGen_Weight->SetMaximum(bcounts_Weight);
+
+HBetaRec_Weight->SetMaximum(bcounts_Weight);
 HBetaRec_Weight->SetMinimum(1);
+
 HBetaGen_Weight_noTOFcuts->SetMaximum(bcounts_Weight*100);
 HBetaGen_Weight_noTOFcuts->SetMinimum(1);
 
@@ -400,6 +420,10 @@ histplot1f("c7",HBetaProxy_Weight,"Proxy Beta Weighted","Proxy Beta Weighted","N
 histplot1f("c8",HBetaRec_Weight,"Reconstructed Beta Weighted","Reconstructed Beta Weighted","NEntries", out_path + "Weighted_BetaRec"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
 histplot1f("c9",HBetaGen_Weight_noTOFcuts,"Generated Beta Weighted (No TOF Cuts)","Generated Beta Weighted","NEntries", out_path + "Weighted_BetaGen_NoTOFCuts"+ "B" + roundstr_d(betacut,2) + "-" + roundstr_d(betahigh,2)+ "TOF" + to_string(TF) + "TKR" + to_string(TKR)  );
 
+
+HBetaGen_Weight->SaveAs((out_path + "HGenWeight.root").c_str());
+HBetaProxy_Weight->SaveAs((out_path + "HProxyWeight.root").c_str());
+HBetaRec_Weight->SaveAs((out_path + "HRecWeight.root").c_str());
 
 myfile.open(out_path + txtname,std::ios::app);
 myfile << "Total Events/Mainscale Factor " << TreeRec->GetEntries()/MainLoopScaleFactor << endl;
